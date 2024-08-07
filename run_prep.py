@@ -15,7 +15,7 @@ while True:
 
 runtime = input("Enter runtime: ")
 suffix = "d"+d+"_"+state
-filename = "ful_prep_sim_" + suffix + ".py"
+filename = "full_prep_sim_" + suffix + ".py"
 path = "logs_prep_" + suffix
 if not os.path.exists(path):    
     try:

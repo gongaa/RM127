@@ -15,8 +15,7 @@ bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
 
 n = 7
 N = 2 ** n
-wt_thresh = n - (n-1)//3 # for [[127,1,7]]
-# wt_thresh = n - (n-1)//2 # for[[127,1,15]]
+wt_thresh = n - (n-1)//2 # for[[127,1,15]]
 F = np.array([[1,0],[1,1]])
 E = F
 for i in range(n-1):
@@ -140,23 +139,24 @@ for r in range(n): # rounds
     for j in range(0, N, 2*sep):
         for i in range(sep):
             if j+i+sep < N-1:
-                circuit.append("CNOT", [a1_permute[j+i+sep], a1_permute[j+i]])
-                tick_circuit.append("CNOT", [a1_permute[j+i+sep], a1_permute[j+i]])
-                circuit.append("DEPOLARIZE2", [a1_permute[j+i+sep], a1_permute[j+i]], p_CNOT)
-                circuit.append("CNOT", [N + a2_permute[j+i+sep], N + a2_permute[j+i]])
-                tick_circuit.append("CNOT", [N + a2_permute[j+i+sep], N + a2_permute[j+i]])
-                circuit.append("DEPOLARIZE2", [N + a2_permute[j+i+sep], N + a2_permute[j+i]], p_CNOT)
-                circuit.append("CNOT", [2*N + a3_permute[j+i+sep], 2*N + a3_permute[j+i]])
-                tick_circuit.append("CNOT", [2*N + a3_permute[j+i+sep], 2*N + a3_permute[j+i]])
-                circuit.append("DEPOLARIZE2", [2*N + a3_permute[j+i+sep], 2*N + a3_permute[j+i]], p_CNOT)
-                circuit.append("CNOT", [3*N + a4_permute[j+i+sep], 3*N + a4_permute[j+i]])
-                tick_circuit.append("CNOT", [3*N + a4_permute[j+i+sep], 3*N + a4_permute[j+i]])
-                circuit.append("DEPOLARIZE2", [3*N + a4_permute[j+i+sep], 3*N + a4_permute[j+i]], p_CNOT)
+                circuit.append("CNOT", [a1_permute[j+i], a1_permute[j+i+sep]])
+                tick_circuit.append("CNOT", [a1_permute[j+i], a1_permute[j+i+sep]])
+                circuit.append("DEPOLARIZE2", [a1_permute[j+i], a1_permute[j+i+sep]], p_CNOT)
+                circuit.append("CNOT", [N + a2_permute[j+i], N + a2_permute[j+i+sep]])
+                tick_circuit.append("CNOT", [N + a2_permute[j+i], N + a2_permute[j+i+sep]])
+                circuit.append("DEPOLARIZE2", [N + a2_permute[j+i], N + a2_permute[j+i+sep]], p_CNOT)
+                circuit.append("CNOT", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]])
+                tick_circuit.append("CNOT", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]])
+                circuit.append("DEPOLARIZE2", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]], p_CNOT)
+                circuit.append("CNOT", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]])
+                tick_circuit.append("CNOT", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]])
+                circuit.append("DEPOLARIZE2", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]], p_CNOT)
 
     circuit.append("TICK")
     tick_circuits.append(tick_circuit)
 
-
+# X error detection first
+# copy X error from ancilla 1 to 2, and 3 to 4
 for i in range(N-1):
     circuit.append("CNOT", [i, N+i])
     circuit.append("DEPOLARIZE2", [i, N+i], p_CNOT)
@@ -179,45 +179,41 @@ for r in range(n):
     sep = 2 ** r
     for j in range(0, N, 2*sep):
         for i in range(sep):
-            circuit.append("CNOT", [N+j+i+sep, N+j+i])    
-            circuit.append("CNOT", [3*N+j+i+sep, 3*N+j+i])    
+            circuit.append("CNOT", [N+j+i, N+j+i+sep])    
+            circuit.append("CNOT", [3*N+j+i, 3*N+j+i+sep])     
 
-# ancilla 2
-for i in range(N-1):
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("MX", N+i)
-    else:
-        circuit.append("M", N+i)
-circuit.append("M", N+N-1)
-
-# bit flip detection
+# ancilla 2 bit flip detection
 num_a2_detector = 0
 detector_str = ""
-for i in range(N):
-    if bin_wt(i) < wt_thresh:
-        detector_str += f"DETECTOR rec[{-N+i}]\n"
+j = 0
+for i in range(1, N)[::-1]:
+    if bin_wt(i) >= wt_thresh:
+        circuit.append("MX", N+N-1-i)
+    else:
+        circuit.append("M", N+N-1-i)
+        detector_str += f"DETECTOR rec[{-N+j}]\n"
         num_a2_detector += 1
-# detector_str += "DETECTOR rec[-1]\n"        
+    j += 1
+circuit.append("MX", N+N-1)
+
 detector_circuit = stim.Circuit(detector_str)
 circuit += detector_circuit
 print(f"#detectors put on a2: {num_a2_detector}")
 
-# ancilla 4
-for i in range(N-1):
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("MX", 3*N+i)
-    else:
-        circuit.append("M", 3*N+i)
-circuit.append("M", 3*N+N-1)
-
-# bit flip detection
+# ancilla 4 bit flip detection
 num_a4_detector = 0
 detector_str = ""
-for i in range(N):
-    if bin_wt(i) < wt_thresh:
-        detector_str += f"DETECTOR rec[{-N+i}]\n"
+j = 0
+for i in range(1, N)[::-1]:
+    if bin_wt(i) >= wt_thresh:
+        circuit.append("MX", 3*N+N-1-i)
+    else:
+        circuit.append("M", 3*N+N-1-i)
+        detector_str += f"DETECTOR rec[{-N+j}]\n"
         num_a4_detector += 1
-# detector_str += "DETECTOR rec[-1]\n"        
+    j += 1
+circuit.append("MX", 3*N+N-1)
+  
 detector_circuit = stim.Circuit(detector_str)
 circuit += detector_circuit
 print(f"#detectors put on a4: {num_a4_detector}")
@@ -240,25 +236,22 @@ for r in range(n):
     sep = 2 ** r
     for j in range(0, N, 2*sep):
         for i in range(sep):
-            circuit.append("CNOT", [2*N+j+i+sep, 2*N+j+i])    
+            circuit.append("CNOT", [2*N+j+i, 2*N+j+i+sep])      
 
-# ancilla 3
-for i in range(N-1):
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("MX", 2*N+i)
-    else:
-        circuit.append("M", 2*N+i)
-circuit.append("M", 2*N+N-1)
-
-
-# phase flip detection
+# ancilla 3 phase flip detection
 num_a3_detector = 0
 detector_str = ""
-for i in range(N-1):
+j = 0
+for i in range(1, N)[::-1]:
     if bin_wt(i) >= wt_thresh:
-        detector_str += f"DETECTOR rec[{-N+i}]\n"
+        circuit.append("MX", 2*N+N-1-i)
+        detector_str += f"DETECTOR rec[{-N+j}]\n"
         num_a3_detector += 1
-# detector_str += "DETECTOR rec[-1]\n"        
+    else:
+        circuit.append("M", 2*N+N-1-i)
+    j += 1
+circuit.append("MX", 2*N+N-1)
+
 detector_circuit = stim.Circuit(detector_str)
 circuit += detector_circuit
 print(f"#detectors put on a3: {num_a3_detector}")
@@ -268,15 +261,14 @@ for r in range(n):
     sep = 2 ** r
     for j in range(0, N, 2*sep):
         for i in range(sep):
-            circuit.append("CNOT", [j+i+sep, j+i])    
-#     circuit.append("TICK")
+            circuit.append("CNOT", [j+i, j+i+sep])    
     
-for i in range(N-1):
+for i in range(1, N)[::-1]:
     if bin_wt(i) >= wt_thresh:
-        circuit.append("MX", i)
+        circuit.append("MX", N-1-i)
     else:
-        circuit.append("M", i)
-circuit.append("M", N-1)
+        circuit.append("M", N-1-i)
+circuit.append("MX", N-1)
 num_a1_detector = 0
 detector_str = ""
 for i in range(N):
@@ -318,8 +310,8 @@ for round in range(num_rounds):
     one_fault_dict = Counter(np.nonzero(one_fault_data)[1]) # know each row only has one nonzero, extract the columns that the faults occur
     combined_one_fault_dict = combined_one_fault_dict + one_fault_dict
 
-    for single_shot_err_data in unflagged_err_data[row_sums >= 4]:
-        # four faults passing the test, suspicious
+    for single_shot_err_data in unflagged_err_data[row_sums >= 2]:
+        to_print = ""
         num_faults = np.count_nonzero(single_shot_err_data)
         dem_filter = stim.DetectorErrorModel()
         for error_index in np.flatnonzero(single_shot_err_data):
@@ -327,18 +319,23 @@ for round in range(num_rounds):
         explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem_filter, reduce_to_one_representative_error=True)
         ticks_after_prep = [err.circuit_error_locations[0].tick_offset >= 7 for err in explained_errors]
         if all(ticks_after_prep): continue # error happened on copying CNOT gates
-        print(f"{num_faults} faults occurred")
+        to_print += f"{num_faults} faults occurred\n"
         final_pauli_strings = []
         for err in explained_errors:
-            print(err)    
             rep_loc = err.circuit_error_locations[0]
             tick = rep_loc.tick_offset
             final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick+1:])
             final_pauli_strings.append(final_pauli_string)
-            print(f"fault at tick {tick}, {rep_loc.flipped_pauli_product}, final wt: {final_pauli_string.weight}. X: {final_pauli_string.pauli_indices('X')}, Y: {final_pauli_string.pauli_indices('Y')}, Z: {final_pauli_string.pauli_indices('Z')}")
+            to_print += f"fault at tick {tick}, {rep_loc.flipped_pauli_product}, final wt: {final_pauli_string.weight}. X: {final_pauli_string.pauli_indices('X')}, Y: {final_pauli_string.pauli_indices('Y')}, Z: {final_pauli_string.pauli_indices('Z')}\n"
         final_pauli_product = reduce(stim.PauliString.__mul__, final_pauli_strings, stim.PauliString(4*N))
         final_wt = final_pauli_product.weight
-        print(f"final wt after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}")
+        to_print += f"final wt after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}\n"
+        final_pauli_product = final_pauli_product[:N]
+        final_wt = final_pauli_product.weight
+        if final_wt >= num_faults:
+            to_print += f"final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}"
+            print(explained_errors)
+            print(to_print, flush=True)
 
     end = time.time()
     if round == 0:

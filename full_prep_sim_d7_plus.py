@@ -16,7 +16,6 @@ bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
 n = 7
 N = 2 ** n
 wt_thresh = n - (n-1)//3 # for [[127,1,7]]
-# wt_thresh = n - (n-1)//2 # for[[127,1,15]]
 F = np.array([[1,0],[1,1]])
 E = F
 for i in range(n-1):
@@ -87,6 +86,8 @@ PE_permute = [Ax(AE, i) for i in range(N-1)]
 p_CNOT = 0.001
 p_meas = 0.0005 
 p_prep = p_meas
+
+print(f"p_CNOT={p_CNOT}, p_measure={p_meas}, p_preparation={p_prep}")
 
 circuit = stim.Circuit()
 error_copy_circuit = stim.Circuit()
@@ -311,8 +312,8 @@ for round in range(num_rounds):
     one_fault_dict = Counter(np.nonzero(one_fault_data)[1]) # know each row only has one nonzero, extract the columns that the faults occur
     combined_one_fault_dict = combined_one_fault_dict + one_fault_dict
 
-    for single_shot_err_data in unflagged_err_data[row_sums >= 4]:
-        # four faults passing the test, suspicious
+    for single_shot_err_data in unflagged_err_data[row_sums >= 2]:
+        to_print = ""
         num_faults = np.count_nonzero(single_shot_err_data)
         dem_filter = stim.DetectorErrorModel()
         for error_index in np.flatnonzero(single_shot_err_data):
@@ -320,18 +321,23 @@ for round in range(num_rounds):
         explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem_filter, reduce_to_one_representative_error=True)
         ticks_after_prep = [err.circuit_error_locations[0].tick_offset >= 7 for err in explained_errors]
         if all(ticks_after_prep): continue # error happened on copying CNOT gates
-        print(f"{num_faults} faults occurred")
+        to_print += f"{num_faults} faults occurred\n"
         final_pauli_strings = []
         for err in explained_errors:
-            print(err)    
             rep_loc = err.circuit_error_locations[0]
             tick = rep_loc.tick_offset
             final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick+1:])
             final_pauli_strings.append(final_pauli_string)
-            print(f"fault at tick {tick}, {rep_loc.flipped_pauli_product}, final wt: {final_pauli_string.weight}. X: {final_pauli_string.pauli_indices('X')}, Y: {final_pauli_string.pauli_indices('Y')}, Z: {final_pauli_string.pauli_indices('Z')}")
+            to_print += f"fault at tick {tick}, {rep_loc.flipped_pauli_product}, final wt: {final_pauli_string.weight}. X: {final_pauli_string.pauli_indices('X')}, Y: {final_pauli_string.pauli_indices('Y')}, Z: {final_pauli_string.pauli_indices('Z')}\n"
         final_pauli_product = reduce(stim.PauliString.__mul__, final_pauli_strings, stim.PauliString(4*N))
         final_wt = final_pauli_product.weight
-        print(f"final wt after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}")
+        to_print += f"final wt after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}\n"
+        final_pauli_product = final_pauli_product[:N]
+        final_wt = final_pauli_product.weight
+        if final_wt >= num_faults:
+            to_print += f"final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}"
+            print(explained_errors)
+            print(to_print, flush=True)
 
     end = time.time()
     if round == 0:
