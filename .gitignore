@@ -1,0 +1,8 @@
+build/*
+logs*/*
+slurm*
+.ipynb_checkpoints
+.vscode
+theme.py
+__pycache__
+*.html
