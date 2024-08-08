@@ -10,24 +10,13 @@ import operator
 from collections import Counter
 from functools import reduce
 
-bin_wt = lambda i: bin(i)[2:].count('1')
-bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
-
 n = 7
 N = 2 ** n
 wt_thresh = n - (n-1)//3 # for [[127,1,7]]
-F = np.array([[1,0],[1,1]])
-E = F
-for i in range(n-1):
-    E = scipy.linalg.kron(E, F)
+ 
+bin_wt = lambda i: bin(i)[2:].count('1')
+bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
 
-frozen_mask = [bin_wt(i)<wt_thresh for i in range(N)]
-frozen_mask[-1] = True # logical |0>
-
-def is_codeword(M):
-    unencode = (M @ E) % 2
-    return np.logical_not(unencode[:, frozen_mask].any(axis=1))
-    
 def propagate(
     pauli_string: stim.PauliString,
     circuits: List[stim.Circuit]
@@ -134,6 +123,8 @@ for i in range(1, N):
         circuit.append("R", 3*N + a4_permute[N-1-i])
         circuit.append("X_ERROR", 3*N + a4_permute[N-1-i], p_prep)
 circuit.append("RX", 3*N+N-1)
+
+circuit.append("TICK")
 
 for r in range(n): # rounds
     sep = 2 ** r
@@ -319,14 +310,15 @@ for round in range(num_rounds):
         for error_index in np.flatnonzero(single_shot_err_data):
             dem_filter.append(flat_error_instructions[error_index])
         explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem_filter, reduce_to_one_representative_error=True)
-        ticks_after_prep = [err.circuit_error_locations[0].tick_offset >= 7 for err in explained_errors]
+        ticks_after_prep = [err.circuit_error_locations[0].tick_offset >= 8 for err in explained_errors]
         if all(ticks_after_prep): continue # error happened on copying CNOT gates
         to_print += f"{num_faults} faults occurred\n"
         final_pauli_strings = []
         for err in explained_errors:
             rep_loc = err.circuit_error_locations[0]
+            to_print += f"{rep_loc}\n"
             tick = rep_loc.tick_offset
-            final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick+1:])
+            final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick:])
             final_pauli_strings.append(final_pauli_string)
             to_print += f"fault at tick {tick}, {rep_loc.flipped_pauli_product}, final wt: {final_pauli_string.weight}. X: {final_pauli_string.pauli_indices('X')}, Y: {final_pauli_string.pauli_indices('Y')}, Z: {final_pauli_string.pauli_indices('Z')}\n"
         final_pauli_product = reduce(stim.PauliString.__mul__, final_pauli_strings, stim.PauliString(4*N))
@@ -336,7 +328,6 @@ for round in range(num_rounds):
         final_wt = final_pauli_product.weight
         if final_wt >= num_faults:
             to_print += f"final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}"
-            print(explained_errors)
             print(to_print, flush=True)
 
     end = time.time()

@@ -6,3 +6,5 @@ slurm*
 theme.py
 __pycache__
 *.html
+*.so
+src/Decoder/PyDecoder_polar.cpp

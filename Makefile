@@ -7,7 +7,7 @@ OBJ_DIR  := $(BUILD)/objects
 APP_DIR  := $(BUILD)/apps
 TARGET   := program
 INCLUDE  := -Iinclude/
-IGNORE   := src/Algo/PRNG_MT19937_simd.cpp src/Algo/Event_generator_fast.cpp src/Util/CRC_polynomial_fast.cpp 
+IGNORE   := src/Algo/PRNG_MT19937_simd.cpp src/Algo/Event_generator_fast.cpp src/Util/CRC_polynomial_fast.cpp src/Decoder/PyDecoder_polar.cpp
 SRC      :=                        \
    $(wildcard src/Algo/*.cpp) 	   \
    $(wildcard src/Channel/*.cpp)   \

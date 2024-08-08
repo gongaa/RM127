@@ -36,7 +36,7 @@ int simulation_punctured_RM(int r, int num_total, double p, int list_size, int s
     for (int i = 0; i < N-1; i++)
         llr_noisy_codeword[i] = noisy_codeword[i] ? -log((1-p)/p) : log((1-p)/p); // 0 -> 1.0; 1 -> -1.0
     llr_noisy_codeword[N-1] = 0; // last bit is punctured
-    SCL_decoder->decode(llr_noisy_codeword.data(), SCL_denoised_codeword.data(), 0);
+    SCL_decoder->decode(llr_noisy_codeword.data(), SCL_denoised_codeword.data());
     SCL_num_flips = count_flip(N-1, noisy_codeword, SCL_denoised_codeword);
     cerr << "distance to closest codeword " << SCL_num_flips << endl;
     return 0;
@@ -51,7 +51,7 @@ int simulation_punctured_RM(int r, int num_total, double p, int list_size, int s
             llr_noisy_codeword[i] = noisy_codeword[i] ? -log((1-p)/p) : log((1-p)/p); // 0 -> 1.0; 1 -> -1.0
         llr_noisy_codeword[N-1] = 0; // last bit is punctured
 
-        SCL_decoder->decode(llr_noisy_codeword.data(), SCL_denoised_codeword.data(), 0);
+        SCL_decoder->decode(llr_noisy_codeword.data(), SCL_denoised_codeword.data());
         SCL_num_flips = count_flip(N-1, noisy_codeword, SCL_denoised_codeword);
         encoder->encode_mm_code(SCL_denoised_codeword.data(), encoded_codeword.data(), N);
         // class_bit = SCL_decoder->get_last_info_bit();
@@ -107,7 +107,7 @@ int simulation_RM_code_switching(int num_total, double p, int list_size, int see
             llr_noisy_codeword[i] = noisy_codeword[i] ? -log((1-p)/p) : log((1-p)/p); // 0 -> 1.0; 1 -> -1.0
         llr_noisy_codeword[N-1] = 0; // last bit is punctured
 
-        SCL_decoder->decode(llr_noisy_codeword.data(), SCL_denoised_codeword.data(), 0);
+        SCL_decoder->decode(llr_noisy_codeword.data(), SCL_denoised_codeword.data());
         SCL_num_flips = count_flip(N-1, noisy_codeword, SCL_denoised_codeword);
         encoder->encode_mm_code(SCL_denoised_codeword.data(), encoded_codeword.data(), N);
         class_bit = SCL_decoder->get_last_info_bit();

@@ -109,7 +109,7 @@ void frozen_bits_generator_AWGN_SC(const int& N, const int& K, const double& db,
 	std::fill(fake_frozen_bits.begin() + K, fake_frozen_bits.end(),       1);
     Decoder_polar_SCL* decoder = new Decoder_polar_SCL(K, N, 1, fake_frozen_bits);
     vector<int> denoised_codeword(N);
-    decoder->decode_SC(z.data(), denoised_codeword.data(), 0);
+    decoder->decode_SC(z.data(), denoised_codeword.data());
     decoder->get_llr_for_frozen_bits(z.data());
     for (int i = 0; i < N; i++) frozen_bits[i] = 1;
     vector<uint32_t> best_channels(N);
@@ -127,7 +127,7 @@ void frozen_bits_generator_BSC_SC(const int& N, const int& K, const double& p, v
 	std::fill(fake_frozen_bits.begin() + K, fake_frozen_bits.end(),       1);
     Decoder_polar_SCL* decoder = new Decoder_polar_SCL(K, N, 1, fake_frozen_bits);
     vector<int> denoised_codeword(N);
-    decoder->decode_SC(z.data(), denoised_codeword.data(), 0);
+    decoder->decode_SC(z.data(), denoised_codeword.data());
     decoder->get_llr_for_frozen_bits(z.data());
     for (int i = 0; i < N; i++) frozen_bits[i] = 1;
     vector<uint32_t> best_channels(N);

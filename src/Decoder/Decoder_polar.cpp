@@ -126,7 +126,7 @@ void Decoder_polar_SCL::partition(vector<int>& info_indices, map<int, vector<int
 	}
 }
 
-void Decoder_polar_SCL::select_best_path(const size_t frame_id)
+void Decoder_polar_SCL::select_best_path()
 {   // select the best one, not the best L ones.
 	int best_path = 0;
 	if (active_paths.size() >= 1)
@@ -158,7 +158,7 @@ void Decoder_polar_SCL::_load(const double *Y_N)
 	active_paths.insert(0);
 }
 
-void Decoder_polar_SCL::_decode(const size_t frame_id)
+void Decoder_polar_SCL::_decode()
 {
 	std::set<int> last_active_paths;
 	int cur_path;
@@ -260,7 +260,7 @@ void Decoder_polar_SCL::_decode(const size_t frame_id)
 			this->recursive_propagate_sums(leaves_array[path][leaf_index]);
 	}
 
-	this->select_best_path(frame_id);
+	this->select_best_path();
 }
 
 void Decoder_polar_SCL::recursive_propagate_sums(const Node<Contents_SCL>* node_cur)
@@ -334,15 +334,15 @@ void Decoder_polar_SCL::_store(int *V) const
     std::copy(root->get_c()->s.begin(), root->get_c()->s.begin() + this->N, V);
 }
 
-int Decoder_polar_SCL::decode(const double *Y_N, int *V_K, const size_t frame_id)
+int Decoder_polar_SCL::decode(const double *Y_N, int *V_K)
 {
     this->_load(Y_N);
-    this->_decode(frame_id);
+    this->_decode();
     this->_store(V_K);
 	return 0;
 }
 
-void Decoder_polar_SCL::decode_SC(const double *Y_N, int *V_K, const size_t frame_id) 
+void Decoder_polar_SCL::decode_SC(const double *Y_N, int *V_K) 
 {
 	this->_load(Y_N);
 	this->_decode_SC(polar_trees[0]->get_root());

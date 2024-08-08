@@ -40,8 +40,8 @@ protected:
 public:
     Decoder_polar_SCL(const int& K, const int& N, const int& L, const vector<bool>& frozen_bits);
     virtual ~Decoder_polar_SCL();
-    virtual int decode(const double *Y_N, int *V_K, const size_t frame_id);
-    void decode_SC(const double *Y_N, int *V_K, const size_t frame_id);
+    virtual int decode(const double *Y_N, int *V_K);
+    void decode_SC(const double *Y_N, int *V_K);
     void get_llr_for_frozen_bits(double *Y_N);
     void copy_codeword_list(vector<vector<int>>& c_list, vector<double>& pm_list);
     void partition(vector<int>& info_indices, map<int, vector<int>>& par, map<int, vector<int>>& flips, vector<int>& noisy_codeword, int& best_path_class_idx);
@@ -50,7 +50,7 @@ public:
 
 protected:
     void _load(const double *Y_N);
-    void _decode(const size_t frame_id);
+    void _decode();
     void _store(int *V_K) const;
     void _decode_SC(Node<Contents_SCL>* node_cur);
 
@@ -63,7 +63,7 @@ private:
     void recursive_duplicate_tree_sums(Node<Contents_SCL>* node_a, Node<Contents_SCL>* node_b, Node<Contents_SCL>* node_caller);
 
 protected:
-    virtual void select_best_path(const size_t frame_id);
+    virtual void select_best_path();
     
     void recursive_allocate_nodes_contents(Node<Contents_SCL>* node_curr, const int vector_size, int& max_depth_llrs);
     void recursive_initialize_frozen_bits(const Node<Contents_SCL>* node_curr, const std::vector<bool>& frozen_bits);

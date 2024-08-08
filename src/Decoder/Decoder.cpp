@@ -38,26 +38,26 @@ void Decoder::f_plus(const double* LLR_fst, const double* LLR_snd, const int siz
     }
 }
 
-void Decoder::f_plus_avx(const double* LLR_fst, const double* LLR_snd, const int size, double* LLR_new)
-{   // size needs to be a multiple of four
-    for (int i = 0; i < size; i += 4) {
-        __m256d LLR_fst_vec = _mm256_loadu_pd(&LLR_fst[i]);
-        __m256d LLR_snd_vec = _mm256_loadu_pd(&LLR_snd[i]);
+// void Decoder::f_plus_avx(const double* LLR_fst, const double* LLR_snd, const int size, double* LLR_new)
+// {   // size needs to be a multiple of four
+//     for (int i = 0; i < size; i += 4) {
+//         __m256d LLR_fst_vec = _mm256_loadu_pd(&LLR_fst[i]);
+//         __m256d LLR_snd_vec = _mm256_loadu_pd(&LLR_snd[i]);
 
-        __m256d abs_fst_vec = _mm256_andnot_pd(_mm256_set1_pd(-0.0), LLR_fst_vec);
-        __m256d abs_snd_vec = _mm256_andnot_pd(_mm256_set1_pd(-0.0), LLR_snd_vec);
+//         __m256d abs_fst_vec = _mm256_andnot_pd(_mm256_set1_pd(-0.0), LLR_fst_vec);
+//         __m256d abs_snd_vec = _mm256_andnot_pd(_mm256_set1_pd(-0.0), LLR_snd_vec);
 
-        __m256d sign_fst_vec = _mm256_cmp_pd(LLR_fst_vec, _mm256_set1_pd(0.0), _CMP_LT_OQ);
-        __m256d sign_snd_vec = _mm256_cmp_pd(LLR_snd_vec, _mm256_set1_pd(0.0), _CMP_LT_OQ);
+//         __m256d sign_fst_vec = _mm256_cmp_pd(LLR_fst_vec, _mm256_set1_pd(0.0), _CMP_LT_OQ);
+//         __m256d sign_snd_vec = _mm256_cmp_pd(LLR_snd_vec, _mm256_set1_pd(0.0), _CMP_LT_OQ);
 
-        __m256d sign_vec = _mm256_xor_pd(sign_fst_vec, sign_snd_vec);
+//         __m256d sign_vec = _mm256_xor_pd(sign_fst_vec, sign_snd_vec);
         
-        __m256d min_vec = _mm256_min_pd(abs_fst_vec, abs_snd_vec);
-        __m256d result_vec = _mm256_blendv_pd(min_vec, _mm256_sub_pd(_mm256_setzero_pd(), min_vec), sign_vec);
+//         __m256d min_vec = _mm256_min_pd(abs_fst_vec, abs_snd_vec);
+//         __m256d result_vec = _mm256_blendv_pd(min_vec, _mm256_sub_pd(_mm256_setzero_pd(), min_vec), sign_vec);
 
-        _mm256_storeu_pd(&LLR_new[i], result_vec);
-    }
-}
+//         _mm256_storeu_pd(&LLR_new[i], result_vec);
+//     }
+// }
 
 void Decoder::f_minus(const double* LLR_fst, const double* LLR_snd, const int* bits, const int size, double* LLR_new)
 {
