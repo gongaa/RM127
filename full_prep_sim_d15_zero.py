@@ -9,6 +9,8 @@ import time
 import operator
 from collections import Counter
 from functools import reduce
+import sys
+import pickle
 
 n = 7
 N = 2 ** n
@@ -281,67 +283,113 @@ print(f"#detectors put on a1: {num_a1_detector}")
 num_flag_detector = num_a2_detector + num_a3_detector + num_a4_detector
 dem: stim.DetectorErrorModel = circuit.detector_error_model()
 dem_sampler: stim.CompiledDemSampler = dem.compile_sampler()
+flat_error_instructions: List[stim.DemInstruction] = [
+    instruction
+    for instruction in dem.flattened()
+    if instruction.type == 'error'
+]
+
+
+# start = time.time()
+# prop_dict = {}
+# print(f"total {len(flat_error_instructions)} instructions")
+# for i in range(len(flat_error_instructions)):
+#     dem_filter = stim.DetectorErrorModel()
+#     dem_filter.append(flat_error_instructions[i])
+#     explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem_filter, reduce_to_one_representative_error=True)
+#     final_pauli_strings = []
+#     for err in explained_errors:
+#         rep_loc = err.circuit_error_locations[0]
+#         tick = rep_loc.tick_offset
+#         final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick:])
+#         final_pauli_strings.append(final_pauli_string)
+#     final_pauli_product = reduce(stim.PauliString.__mul__, final_pauli_strings, stim.PauliString(4*N))
+#     final_pauli_product = final_pauli_product[:N]
+#     final_wt = final_pauli_product.weight
+#     print(f"instruction {i}, final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}")
+#     prop_dict[i] = final_pauli_product
+# end = time.time()
+# with open(f"logs_prep_d15_zero/propagation_dict.pkl", 'wb') as f:
+#     pickle.dump(prop_dict, f)
+# print(f"Total Elapsed time: {end-start}")   
+
+
 combined_counter = Counter({}) 
 combined_one_fault_dict = Counter({})
 
-total_passed = 0
-num_rounds = 1000
-num_shots = 100000
-for round in range(num_rounds):
-    start = time.time()
-    det_data, obs_data, err_data = dem_sampler.sample(shots=num_shots, return_errors=True, bit_packed=False)
-    sample_end = time.time()
-    if round == 0:
-        print(f"error data shape {err_data.shape}, detector data shape {det_data.shape}", flush=True)
+if __name__ == "__main__":
+    # Check if an argument has been provided
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <integer>")
+        sys.exit(1)
 
-    not_passed = det_data[:,:num_flag_detector].any(axis=1)
-    flat_error_instructions: List[stim.DemInstruction] = [
-        instruction
-        for instruction in dem.flattened()
-        if instruction.type == 'error'
-    ]
-    unflagged_err_data = err_data[np.logical_not(not_passed)]
-    total_passed += len(unflagged_err_data)
-    
-    row_sums = unflagged_err_data.sum(axis=1)
-    combined_counter = combined_counter + Counter(row_sums)
-    one_fault_data = unflagged_err_data[row_sums == 1]
-    one_fault_dict = Counter(np.nonzero(one_fault_data)[1]) # know each row only has one nonzero, extract the columns that the faults occur
-    combined_one_fault_dict = combined_one_fault_dict + one_fault_dict
+    try:
+        # Get the integer from the command line argument
+        input_value = int(sys.argv[1])
+    except ValueError:
+        print("The argument must be an integer.")
+        sys.exit(1)
+        
+    print(f"writing to logs_prep_d15_zero/{input_value}.log", flush=True)
+    total_passed = 0
+    num_rounds = 2000
+    num_shots = 100000
+    fault_locations = ""
+    for round in range(num_rounds):
+        start = time.time()
+        det_data, obs_data, err_data = dem_sampler.sample(shots=num_shots, return_errors=True, bit_packed=False)
+        sample_end = time.time()
+        if round == 0:
+            print(f"error data shape {err_data.shape}, detector data shape {det_data.shape}", flush=True)
 
-    for single_shot_err_data in unflagged_err_data[row_sums >= 2]:
-        to_print = ""
-        num_faults = np.count_nonzero(single_shot_err_data)
-        dem_filter = stim.DetectorErrorModel()
-        for error_index in np.flatnonzero(single_shot_err_data):
-            dem_filter.append(flat_error_instructions[error_index])
-        explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem_filter, reduce_to_one_representative_error=True)
-        ticks_after_prep = [err.circuit_error_locations[0].tick_offset >= 8 for err in explained_errors]
-        if all(ticks_after_prep): continue # error happened on copying CNOT gates
-        to_print += f"{num_faults} faults occurred\n"
-        final_pauli_strings = []
-        for err in explained_errors:
-            rep_loc = err.circuit_error_locations[0]
-            to_print += f"{rep_loc}\n"
-            tick = rep_loc.tick_offset
-            final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick:])
-            final_pauli_strings.append(final_pauli_string)
-            to_print += f"fault at tick {tick}, {rep_loc.flipped_pauli_product}, final wt: {final_pauli_string.weight}. X: {final_pauli_string.pauli_indices('X')}, Y: {final_pauli_string.pauli_indices('Y')}, Z: {final_pauli_string.pauli_indices('Z')}\n"
-        final_pauli_product = reduce(stim.PauliString.__mul__, final_pauli_strings, stim.PauliString(4*N))
-        final_wt = final_pauli_product.weight
-        to_print += f"final wt after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}\n"
-        final_pauli_product = final_pauli_product[:N]
-        final_wt = final_pauli_product.weight
-        if final_wt >= num_faults:
-            to_print += f"final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}"
-            print(to_print, flush=True)
+        not_passed = det_data[:,:num_flag_detector].any(axis=1)
+        unflagged_err_data = err_data[np.logical_not(not_passed)]
+        total_passed += len(unflagged_err_data)
+        
+        row_sums = unflagged_err_data.sum(axis=1)
+        combined_counter = combined_counter + Counter(row_sums)
+        one_fault_data = unflagged_err_data[row_sums == 1]
+        one_fault_dict = Counter(np.nonzero(one_fault_data)[1]) # know each row only has one nonzero, extract the columns that the faults occur
+        combined_one_fault_dict = combined_one_fault_dict + one_fault_dict
 
-    end = time.time()
-    if round == 0:
-        print(f"Stim sampling elapsed time per {num_shots} samples: {sample_end-start} second, with postprocessing {end-start}", flush=True)
-    if (round+1) % 10 == 0: # print every 1e6 samples
-        print("Temporary counter for among all passed samples, how many faults occured:", combined_counter, flush=True)
-    
-print(f"Among {num_rounds * num_shots} samples, {total_passed} passed.")
-print("Counter for among all passed samples, how many faults occured:", combined_counter, flush=True)
-print("number of passing one fault location:", len(combined_one_fault_dict), flush=True)
+        for single_shot_err_data in unflagged_err_data[row_sums >= 2]:
+            fault_locations += str(np.nonzero(single_shot_err_data)[0]) + "\n"
+            to_print = ""
+            num_faults = np.count_nonzero(single_shot_err_data)
+            dem_filter = stim.DetectorErrorModel()
+            for error_index in np.flatnonzero(single_shot_err_data):
+                dem_filter.append(flat_error_instructions[error_index])
+            explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem_filter, reduce_to_one_representative_error=True)
+            ticks_after_prep = [err.circuit_error_locations[0].tick_offset >= 8 for err in explained_errors]
+            if all(ticks_after_prep): continue # error happened on copying CNOT gates
+            to_print += f"{num_faults} faults occurred\n"
+            final_pauli_strings = []
+            for err in explained_errors:
+                rep_loc = err.circuit_error_locations[0]
+                to_print += f"{rep_loc}\n"
+                tick = rep_loc.tick_offset
+                final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick:])
+                final_pauli_strings.append(final_pauli_string)
+                to_print += f"fault at tick {tick}, {rep_loc.flipped_pauli_product}, final wt: {final_pauli_string.weight}. X: {final_pauli_string.pauli_indices('X')}, Y: {final_pauli_string.pauli_indices('Y')}, Z: {final_pauli_string.pauli_indices('Z')}\n"
+            final_pauli_product = reduce(stim.PauliString.__mul__, final_pauli_strings, stim.PauliString(4*N))
+            final_wt = final_pauli_product.weight
+            to_print += f"final wt after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}\n"
+            final_pauli_product = final_pauli_product[:N]
+            final_wt = final_pauli_product.weight
+            if final_wt >= num_faults:
+                to_print += f"final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}"
+                print(to_print, flush=True)
+
+        end = time.time()
+        if round == 0:
+            print(f"Stim sampling elapsed time per {num_shots} samples: {sample_end-start} second, with postprocessing {end-start}", flush=True)
+        if (round+1) % 10 == 0: # print every 1e6 samples
+            print("Temporary counter for among all passed samples, how many faults occured:", combined_counter, flush=True)
+        
+    print(f"Among {num_rounds * num_shots} samples, {total_passed} passed.")
+    print("Counter for among all passed samples, how many faults occured:", combined_counter, flush=True)
+    print("number of passing one fault location:", len(combined_one_fault_dict), flush=True)
+    with open(f"logs_prep_d15_zero/{input_value}_faults.log", 'w') as f:
+        f.write(fault_locations)
+    with open(f"logs_prep_d15_zero/{input_value}_single_fault.pkl", 'wb') as f:
+        pickle.dump(combined_one_fault_dict, f)

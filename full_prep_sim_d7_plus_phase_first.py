@@ -275,6 +275,11 @@ print(f"#detectors put on a1: {num_a1_detector}")
 num_flag_detector = num_a2_detector + num_a3_detector + num_a4_detector
 dem: stim.DetectorErrorModel = circuit.detector_error_model()
 dem_sampler: stim.CompiledDemSampler = dem.compile_sampler()
+flat_error_instructions: List[stim.DemInstruction] = [
+    instruction
+    for instruction in dem.flattened()
+    if instruction.type == 'error'
+]
 combined_counter = Counter({}) 
 combined_one_fault_dict = Counter({})
 
@@ -289,11 +294,6 @@ for round in range(num_rounds):
         print(f"error data shape {err_data.shape}, detector data shape {det_data.shape}", flush=True)
 
     not_passed = det_data[:,:num_flag_detector].any(axis=1)
-    flat_error_instructions: List[stim.DemInstruction] = [
-        instruction
-        for instruction in dem.flattened()
-        if instruction.type == 'error'
-    ]
     unflagged_err_data = err_data[np.logical_not(not_passed)]
     total_passed += len(unflagged_err_data)
     

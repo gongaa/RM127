@@ -27,9 +27,9 @@ def run_exp(s):
 
     print("Your results will be saved under the directory " + path + "/") 
 
-    cmd = "python " + filename
+    cmd = "python " + filename + f" {s}"
     dest = path + "/" + str(s) + ".log"
     process = subprocess.Popen(['sbatch', '--mem-per-cpu', '3000', '--time', runtime+':00:00', '--output', dest, '--wrap', cmd])
 
 for s in range(int(n)):
-    run_exp(16+s)
+    run_exp(32+s)
