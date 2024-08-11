@@ -1,16 +1,14 @@
 import stim
 print(stim.__version__)
 import numpy as np
-import scipy
-from scipy.linalg import kron
 from typing import List
-from pprint import pprint
 import time
 import operator
 from collections import Counter
 from functools import reduce
 import sys
 import pickle
+from utils import propagate, form_pauli_string
 
 n = 7
 N = 2 ** n
@@ -18,35 +16,6 @@ wt_thresh = n - (n-1)//2 # for[[127,1,15]]
 
 bin_wt = lambda i: bin(i)[2:].count('1')
 bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
-
-def propagate(
-    pauli_string: stim.PauliString,
-    circuits: List[stim.Circuit]
-) -> stim.PauliString:
-    for circuit in circuits:
-        pauli_string = pauli_string.after(circuit)
-    return pauli_string
-
-def form_pauli_string(
-    flipped_pauli_product: List[stim.GateTargetWithCoords],
-    num_qubits: int = N,
-) -> stim.PauliString:
-    xs = np.zeros(num_qubits, dtype=np.bool_)
-    zs = np.zeros(num_qubits, dtype=np.bool_)
-    for e in flipped_pauli_product:
-        target_qubit, pauli_type = e.gate_target.value, e.gate_target.pauli_type
-        if target_qubit >= num_qubits:
-            continue
-        if pauli_type == 'X':
-            xs[target_qubit] = 1
-        elif pauli_type == 'Z':
-            zs[target_qubit] = 1
-        elif pauli_type == 'Y':
-            xs[target_qubit] = 1
-            zs[target_qubit] = 1
-    s = stim.PauliString.from_numpy(xs=xs, zs=zs)
-    return s
-    
 int2bin = lambda i: [int(c) for c in bin(i)[2:].rjust(n, '0')]
 bin2int = lambda l: int(''.join(map(str, l)), 2)
 

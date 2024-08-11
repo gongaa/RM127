@@ -32,4 +32,4 @@ def run_exp(s):
     process = subprocess.Popen(['sbatch', '--mem-per-cpu', '3000', '--time', runtime+':00:00', '--output', dest, '--wrap', cmd])
 
 for s in range(int(n)):
-    run_exp(32+s)
+    run_exp(s)

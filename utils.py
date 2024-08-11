@@ -1,15 +1,49 @@
-import pickle
-import re
-from collections import Counter
-import random
-import time
+from typing import List
 import stim
 import numpy as np
+import random # random.choice with counts require python>3.11
+import time, re, pickle
+from collections import  Counter
 from functools import reduce
 
-N = 2 ** 7
+def propagate(
+    pauli_string: stim.PauliString,
+    circuits: List[stim.Circuit]
+) -> stim.PauliString:
+    for circuit in circuits:
+        pauli_string = pauli_string.after(circuit)
+    return pauli_string
+
+def form_pauli_string(
+    flipped_pauli_product: List[stim.GateTargetWithCoords],
+    num_qubits: int,
+) -> stim.PauliString:
+    xs = np.zeros(num_qubits, dtype=np.bool_)
+    zs = np.zeros(num_qubits, dtype=np.bool_)
+    for e in flipped_pauli_product:
+        target_qubit, pauli_type = e.gate_target.value, e.gate_target.pauli_type
+        if target_qubit >= num_qubits:
+            continue
+        if pauli_type == 'X':
+            xs[target_qubit] = 1
+        elif pauli_type == 'Z':
+            zs[target_qubit] = 1
+        elif pauli_type == 'Y':
+            xs[target_qubit] = 1
+            zs[target_qubit] = 1
+    s = stim.PauliString.from_numpy(xs=xs, zs=zs)
+    return s
+
+# helper function: take a PauliString and return its Z-component
+def z_component(s):
+    x, z = s.to_numpy()
+    return stim.PauliString.from_numpy(xs=np.zeros_like(x, dtype=np.bool_), zs=z)
+def x_component(s):
+    x, z = s.to_numpy()
+    return stim.PauliString.from_numpy(xs=x, zs=np.zeros_like(z, dtype=np.bool_))
 
 def sample_ancilla_error(num_shots, d, state, index):
+    N = 128
     with open(f"logs_prep_d{d}_{state}/propagation_dict.pkl", 'rb') as f:
         prop_dict = pickle.load(f)
 
@@ -21,7 +55,6 @@ def sample_ancilla_error(num_shots, d, state, index):
         target_line = lines[-2].strip()
         match = re.search(r'Counter\((\{.*\})\)', target_line)
         if match:
-            # print("group 0", match.group(0))
             counter_dict_str = match.group(1) # extract the dictionary part
             counter_dict = eval(counter_dict_str) # evaluate dict string into dict
             # print(counter_dict)
@@ -46,7 +79,6 @@ def sample_ancilla_error(num_shots, d, state, index):
 
     start = time.time()
     ancilla = random.sample(list(fault_dict.keys()), num_shots, counts=list(fault_dict.values()))
-    # print(ancilla)
     end = time.time()
     print(f"sampling {num_shots} samples elapsed time {end-start} seconds")
 
@@ -55,18 +87,9 @@ def sample_ancilla_error(num_shots, d, state, index):
         if a == 'none': # no faults 
             ancilla_errors.append(stim.PauliString(N))
         elif isinstance(a, tuple): # multiple fault locations
-            err = reduce(stim.PauliString.__mul__, [prop_dict[i] for i in a], stim.PauliString(N))
-            print("multiple fault", err)
-            ancilla_errors.append(err)
-        elif isinstance(a, np.int64): # a single fault
+            ancilla_errors.append(reduce(stim.PauliString.__mul__, [prop_dict[i] for i in a], stim.PauliString(N)))
+        else: # a single fault
             ancilla_errors.append(prop_dict[a])
-            # print("single fault", prop_dict[a])
-        else:
-            print("key is of unknown types", type(a))
 
-    wts = [e.weight for e in ancilla_errors]
-    # print(wts)
-    # print(wts.max(), wts.min())
     return ancilla_errors
 
-sample_ancilla_error(200*1024, 15, 'zero', 0)

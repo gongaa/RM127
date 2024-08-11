@@ -1,16 +1,14 @@
 import stim
 print(stim.__version__)
 import numpy as np
-import scipy
-from scipy.linalg import kron
 from typing import List
-from pprint import pprint
 import time
 import operator
 from collections import Counter
 from functools import reduce
 import sys
 import pickle
+from utils import propagate, form_pauli_string
 
 n = 7
 N = 2 ** n
@@ -18,35 +16,6 @@ wt_thresh = n - (n-1)//2 # for[[127,1,15]]
 
 bin_wt = lambda i: bin(i)[2:].count('1')
 bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
-
-def propagate(
-    pauli_string: stim.PauliString,
-    circuits: List[stim.Circuit]
-) -> stim.PauliString:
-    for circuit in circuits:
-        pauli_string = pauli_string.after(circuit)
-    return pauli_string
-
-def form_pauli_string(
-    flipped_pauli_product: List[stim.GateTargetWithCoords],
-    num_qubits: int = N,
-) -> stim.PauliString:
-    xs = np.zeros(num_qubits, dtype=np.bool_)
-    zs = np.zeros(num_qubits, dtype=np.bool_)
-    for e in flipped_pauli_product:
-        target_qubit, pauli_type = e.gate_target.value, e.gate_target.pauli_type
-        if target_qubit >= num_qubits:
-            continue
-        if pauli_type == 'X':
-            xs[target_qubit] = 1
-        elif pauli_type == 'Z':
-            zs[target_qubit] = 1
-        elif pauli_type == 'Y':
-            xs[target_qubit] = 1
-            zs[target_qubit] = 1
-    s = stim.PauliString.from_numpy(xs=xs, zs=zs)
-    return s
-    
 int2bin = lambda i: [int(c) for c in bin(i)[2:].rjust(n, '0')]
 bin2int = lambda l: int(''.join(map(str, l)), 2)
 
@@ -73,7 +42,7 @@ a3_permute = [Ax(A3, i) for i in range(N-1)]
 a4_permute = [Ax(A4, i) for i in range(N-1)]
 
 p_CNOT = 0.001
-p_meas = 0.0005 
+p_meas = p_CNOT/2
 p_prep = p_meas
 
 print(f"p_CNOT={p_CNOT}, p_measure={p_meas}, p_preparation={p_prep}")
@@ -148,23 +117,23 @@ for r in range(n): # rounds
     circuit.append("TICK")
     tick_circuits.append(tick_circuit)
 
-# X error detection first
-# copy X error from ancilla 1 to 2, and 3 to 4
+# Z error detection first
+# copy Z error from ancilla 1 to 2, and 3 to 4, then measure 2 in X basis, 4 in X basis
 for i in range(N-1):
-    circuit.append("CNOT", [i, N+i])
-    circuit.append("DEPOLARIZE2", [i, N+i], p_CNOT)
-    error_copy_circuit.append("CNOT", [i, N+i])
-    circuit.append("CNOT", [2*N+i, 2*N+N+i])
-    circuit.append("DEPOLARIZE2", [2*N+i, 2*N+N+i], p_CNOT)
-    error_copy_circuit.append("CNOT", [2*N+i, 2*N+N+i])
+    circuit.append("CNOT", [N+i, i])
+    circuit.append("DEPOLARIZE2", [N+i, i], p_CNOT)
+    error_copy_circuit.append("CNOT", [N+i, i])
+    circuit.append("CNOT", [2*N+N+i, 2*N+i])
+    circuit.append("DEPOLARIZE2", [2*N+N+i, 2*N+i], p_CNOT)
+    error_copy_circuit.append("CNOT", [2*N+N+i, 2*N+i])
 circuit.append("TICK")
 tick_circuits.append(error_copy_circuit)
 
 # in experiments, here one needs to measure ancilla 2 & 4 bitwise
 # add noise to ancilla 2 & 4 here, even though they are already captured by DEPOLARIZE on CNOTs
 for i in range(N-1):
-    circuit.append("X_ERROR", N+i, p_meas)
-    circuit.append("X_ERROR", 3*N+i, p_meas)
+    circuit.append("Z_ERROR", N+i, p_meas)
+    circuit.append("Z_ERROR", 3*N+i, p_meas)
 # and do classical (noisyless) processing to see if accepted
 # Stim unencode is faster than my own implementation, hence I use Stim here
 # unencode of ancilla 2 & 4 for acceptance
@@ -175,17 +144,17 @@ for r in range(n):
             circuit.append("CNOT", [N+j+i, N+j+i+sep])    
             circuit.append("CNOT", [3*N+j+i, 3*N+j+i+sep])     
 
-# ancilla 2 bit flip detection
+# ancilla 2 phase flip detection
 num_a2_detector = 0
 detector_str = ""
 j = 0
 for i in range(1, N)[::-1]:
     if bin_wt(i) >= wt_thresh:
         circuit.append("MX", N+N-1-i)
-    else:
-        circuit.append("M", N+N-1-i)
         detector_str += f"DETECTOR rec[{-N+j}]\n"
         num_a2_detector += 1
+    else:
+        circuit.append("M", N+N-1-i)
     j += 1
 circuit.append("MX", N+N-1)
 
@@ -193,17 +162,17 @@ detector_circuit = stim.Circuit(detector_str)
 circuit += detector_circuit
 print(f"#detectors put on a2: {num_a2_detector}")
 
-# ancilla 4 bit flip detection
+# ancilla 4 phase flip detection
 num_a4_detector = 0
 detector_str = ""
 j = 0
 for i in range(1, N)[::-1]:
     if bin_wt(i) >= wt_thresh:
         circuit.append("MX", 3*N+N-1-i)
-    else:
-        circuit.append("M", 3*N+N-1-i)
         detector_str += f"DETECTOR rec[{-N+j}]\n"
         num_a4_detector += 1
+    else:
+        circuit.append("M", 3*N+N-1-i)
     j += 1
 circuit.append("MX", 3*N+N-1)
   
@@ -212,18 +181,18 @@ circuit += detector_circuit
 print(f"#detectors put on a4: {num_a4_detector}")
 
 error_copy_circuit = stim.Circuit()
-# copy Z-error from ancilla 1 to 3
-# CNOT pointing from 3 to 1
+# copy X-error from ancilla 1 to 3, then measure 3 in Z basis
+# CNOT pointing from 1 to 3
 for i in range(N-1):
-    circuit.append("CNOT", [2*N+i, i])
-    circuit.append("DEPOLARIZE2", [2*N+i, i], p_CNOT)
-    error_copy_circuit.append("CNOT", [2*N+i, i])
+    circuit.append("CNOT", [i, 2*N+i])
+    circuit.append("DEPOLARIZE2", [i, 2*N+i], p_CNOT)
+    error_copy_circuit.append("CNOT", [i, 2*N+i])
     
 tick_circuits.append(error_copy_circuit)
 
-# measure ancilla 3 bitwise in X-basis in experiments
+# measure ancilla 3 bitwise in Z-basis in experiments
 for i in range(N-1):
-    circuit.append("Z_ERROR", 2*N+i, p_meas)
+    circuit.append("X_ERROR", 2*N+i, p_meas)
 # Stim processing for acceptance
 for r in range(n):
     sep = 2 ** r
@@ -231,17 +200,17 @@ for r in range(n):
         for i in range(sep):
             circuit.append("CNOT", [2*N+j+i, 2*N+j+i+sep])      
 
-# ancilla 3 phase flip detection
+# ancilla 3 bit flip detection
 num_a3_detector = 0
 detector_str = ""
 j = 0
 for i in range(1, N)[::-1]:
     if bin_wt(i) >= wt_thresh:
         circuit.append("MX", 2*N+N-1-i)
-        detector_str += f"DETECTOR rec[{-N+j}]\n"
-        num_a3_detector += 1
     else:
         circuit.append("M", 2*N+N-1-i)
+        detector_str += f"DETECTOR rec[{-N+j}]\n"
+        num_a3_detector += 1
     j += 1
 circuit.append("MX", 2*N+N-1)
 
@@ -303,7 +272,6 @@ flat_error_instructions: List[stim.DemInstruction] = [
 # with open(f"logs_prep_d15_plus/propagation_dict.pkl", 'wb') as f:
 #     pickle.dump(prop_dict, f)
 # print(f"Total Elapsed time: {end-start}")   
-
 
 
 combined_counter = Counter({}) 

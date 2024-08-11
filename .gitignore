@@ -1,5 +1,6 @@
 build/*
 logs*/*
+old_logs/*
 slurm*
 .ipynb_checkpoints
 .vscode
