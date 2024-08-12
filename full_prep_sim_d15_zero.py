@@ -42,9 +42,10 @@ a2_permute = [Ax(A2, i) for i in range(N-1)]
 a3_permute = [Ax(A3, i) for i in range(N-1)]
 a4_permute = [Ax(A4, i) for i in range(N-1)]
 
-p_CNOT = 0.001
-p_meas = 0.0005 
+p_CNOT = 0.0008
+p_meas = p_CNOT/2
 p_prep = p_meas
+parent_dir = "logs_prep_d15_zero_p"+str(p_CNOT).split('.')[1]
 
 print(f"p_CNOT={p_CNOT}, p_measure={p_meas}, p_preparation={p_prep}")
 
@@ -278,7 +279,7 @@ flat_error_instructions: List[stim.DemInstruction] = [
 #     print(f"instruction {i}, final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}")
 #     prop_dict[i] = final_pauli_product
 # end = time.time()
-# with open(f"logs_prep_d15_zero/propagation_dict.pkl", 'wb') as f:
+# with open(f"{parent_dir}/propagation_dict.pkl", 'wb') as f:
 #     pickle.dump(prop_dict, f)
 # print(f"Total Elapsed time: {end-start}")   
 
@@ -299,9 +300,9 @@ if __name__ == "__main__":
         print("The argument must be an integer.")
         sys.exit(1)
         
-    print(f"writing to logs_prep_d15_zero/{input_value}.log", flush=True)
+    print(f"writing to {parent_dir}/{input_value}.log", flush=True)
     total_passed = 0
-    num_rounds = 2000
+    num_rounds = 2500
     num_shots = 100000
     fault_locations = ""
     for round in range(num_rounds):
@@ -358,7 +359,7 @@ if __name__ == "__main__":
     print(f"Among {num_rounds * num_shots} samples, {total_passed} passed.")
     print("Counter for among all passed samples, how many faults occured:", combined_counter, flush=True)
     print("number of passing one fault location:", len(combined_one_fault_dict), flush=True)
-    with open(f"logs_prep_d15_zero/{input_value}_faults.log", 'w') as f:
+    with open(f"{parent_dir}/{input_value}_faults.log", 'w') as f:
         f.write(fault_locations)
-    with open(f"logs_prep_d15_zero/{input_value}_single_fault.pkl", 'wb') as f:
+    with open(f"{parent_dir}/{input_value}_single_fault.pkl", 'wb') as f:
         pickle.dump(combined_one_fault_dict, f)

@@ -5,14 +5,14 @@ import re
 
 pattern = re.compile(r"^final wt on output .* X: \[(.*?)\], Y: \[(.*?)\], Z: \[(.*?)\]")
 # pattern = re.compile(r"^final wt after copying: .* X: \[(.*?)\], Y: \[(.*?)\], Z: \[(.*?)\]")
-d = 15
+d = 7
 rz = 4 if d==7 else 3
 rx = 2 if d==7 else 3
 decoder_X = PyDecoder_polar_SCL(rx)
 decoder_Z = PyDecoder_polar_SCL(rz)
-state = "zero"
+state = "plus"
     
-log_files = glob.glob(os.path.join(f'logs_prep_d{d}_{state}', '*.log'))
+log_files = glob.glob(os.path.join(f'logs_prep_d{d}_{state}_p0008', '*.log'))
 
 for log_file in log_files:
     print(log_file)

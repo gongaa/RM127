@@ -13,10 +13,12 @@ while True:
     if state in ['zero', 'plus']:
         break
 
+p = input('CNOT error rate: ')
+
 runtime = input("Enter runtime: ")
 suffix = "d"+d+"_"+state
 filename = "full_prep_sim_" + suffix + ".py"
-path = "logs_prep_" + suffix
+path = "logs_prep_" + suffix + "_phase_first" + "_p" + str(p).split('.')[1]
 if not os.path.exists(path):    
     try:
         os.mkdir(path)

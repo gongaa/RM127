@@ -42,30 +42,31 @@ def x_component(s):
     x, z = s.to_numpy()
     return stim.PauliString.from_numpy(xs=x, zs=np.zeros_like(z, dtype=np.bool_))
 
-def sample_ancilla_error(num_shots, d, state, index):
+def sample_ancilla_error(num_shots, d, state, index, dir_suffix=""):
     N = 128
-    with open(f"logs_prep_d{d}_{state}/propagation_dict.pkl", 'rb') as f:
+    parent_dir = f"logs_prep_d{d}_{state}" + dir_suffix
+    with open(f"{parent_dir}/propagation_dict.pkl", 'rb') as f:
         prop_dict = pickle.load(f)
 
-    with open(f"logs_prep_d{d}_{state}/{index}_single_fault.pkl", 'rb') as f:
+    with open(f"{parent_dir}/{index}_single_fault.pkl", 'rb') as f:
         fault_dict = pickle.load(f)
 
-    with open(f"logs_prep_d{d}_{state}/{index}.log", 'r') as f:
+    with open(f"{parent_dir}/{index}.log", 'r') as f:
         lines = f.readlines(0)
         target_line = lines[-2].strip()
         match = re.search(r'Counter\((\{.*\})\)', target_line)
         if match:
             counter_dict_str = match.group(1) # extract the dictionary part
             counter_dict = eval(counter_dict_str) # evaluate dict string into dict
-            # print(counter_dict)
+            print(counter_dict)
             counter_obj = Counter(counter_dict)
             num_no_fault = counter_obj[0]
 
     fault_dict["none"] = num_no_fault
 
-    with open(f"logs_prep_d{d}_{state}/{index}_faults.log", 'r') as f:
+    with open(f"{parent_dir}/{index}_faults.log", 'r') as f:
         lines = f.readlines(0)
-        # print(f"number of lines in {index}_faults.log: {len(lines)}")
+        print(f"number of lines in {index}_faults.log: {len(lines)}")
         for line in lines:
             line = line.strip()[1:-1]
             string_values = line.split()
@@ -75,12 +76,12 @@ def sample_ancilla_error(num_shots, d, state, index):
             else:
                 fault_dict[int_values] = 0
 
-    # print(len(fault_dict))
+    print("length of fault_dict to sample from:", len(fault_dict))
 
     start = time.time()
     ancilla = random.sample(list(fault_dict.keys()), num_shots, counts=list(fault_dict.values()))
     end = time.time()
-    print(f"sampling {num_shots} samples elapsed time {end-start} seconds")
+    print(f"sampling {num_shots} samples from {parent_dir} took {end-start} seconds")
 
     ancilla_errors = []
     for a in ancilla:
