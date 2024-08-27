@@ -1,7 +1,7 @@
 import stim
 print(stim.__version__)
 import numpy as np
-import time
+import time, sys
 from PyDecoder_polar import PyDecoder_polar_SCL
 from utils import z_component, x_component, sample_ancilla_error
 
@@ -25,13 +25,12 @@ def mean_wt(errors):
 # phase error Steane EC block
 def phase_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_correction_error=False):
     global p_CNOT, p_single
-    print(f"p_CNOT used for phase block {p_CNOT}, p_single={p_single}")
     if input_errors is None:
         input_errors = [stim.PauliString(N) for _ in range(bs)]
     # broadcast incoming noise to qubit 0 ~ N-1
     # broadcast ancilla noise to qubit N ~ 2N-1
-    print("phase EC block input noise")
-    mean_wt(input_errors)
+    # print("phase EC block input noise")
+    # mean_wt(input_errors)
     before_coupling_errors = [e1+e2 for (e1,e2) in zip(input_errors, ancilla_errors)] # list of length 2N PauliString
     
     coupling_circuit = stim.Circuit()
@@ -67,15 +66,15 @@ def phase_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable
             class_bit = decoder.last_info_bit
             if class_bit != 0:
                 error_mask[i] = True
-                print("# phase flip:", num_flip)
+                # print("# phase flip:", num_flip)
         residual_errors = list(map(lambda s: s[:N] * z_component(s[N:]), coupling_errors))
-        print("after a phase EC block with decoder")
-        mean_wt(residual_errors)
+        # print("after a phase EC block with decoder")
+        # mean_wt(residual_errors)
         return residual_errors, error_mask
     else: # assume perfect correction first
         residual_errors = list(map(lambda s: s[:N] * z_component(s[N:]), coupling_errors))
-        print("after a phase EC block")
-        mean_wt(residual_errors)
+        # print("after a phase EC block")
+        # mean_wt(residual_errors)
         return residual_errors
 
 def bit_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_correction_error=False):
@@ -84,8 +83,8 @@ def bit_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_c
         input_errors = [stim.PauliString(N) for _ in range(bs)]
     # broadcast incoming noise to qubit 0 ~ N-1
     # broadcast ancilla noise to qubit N ~ 2N-1
-    print("bit EC block input noise")
-    mean_wt(input_errors)
+    # print("bit EC block input noise")
+    # mean_wt(input_errors)
     before_coupling_errors = [e1+e2 for (e1,e2) in zip(input_errors, ancilla_errors)] # list of length 2N PauliString
     
     coupling_circuit = stim.Circuit()
@@ -118,15 +117,15 @@ def bit_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_c
             class_bit = decoder.last_info_bit
             if class_bit != 0:
                 error_mask[i] = True
-                print("# bit flip:", num_flip)
+                # print("# bit flip:", num_flip)
         residual_errors = list(map(lambda s: s[:N] * x_component(s[N:]), coupling_errors))
-        print("after a bit EC block with decoder")
-        mean_wt(residual_errors)
+        # print("after a bit EC block with decoder")
+        # mean_wt(residual_errors)
         return residual_errors, error_mask
     else: # assume perfect correction first
         residual_errors = list(map(lambda s: s[:N] * x_component(s[N:]), coupling_errors))
-        print("after a bit EC block")
-        mean_wt(residual_errors)
+        # print("after a bit EC block")
+        # mean_wt(residual_errors)
         return residual_errors
 
 
@@ -197,7 +196,7 @@ def logical_T(input_noise): # transversal T gate
     return residual_errors
     
 
-def simulate_code_switching_rectangle(num_batch=150):    # batch size fixed to 1024
+def simulate_code_switching_rectangle(num_batch=1000, index=0):    # batch size fixed to 1024
     global dir_suffix
     decoder_r4 = PyDecoder_polar_SCL(4)
     decoder_r3 = PyDecoder_polar_SCL(3)
@@ -205,10 +204,10 @@ def simulate_code_switching_rectangle(num_batch=150):    # batch size fixed to 1
     total_Z_errors = 0; total_X_errors = 0 # want to confirm the phase flip is the dominant term
     num_shots = num_batch * bs
     start = time.time()
-    a1_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 0, dir_suffix)
-    a2_d7_plus = sample_ancilla_error(num_shots, 7, 'plus', 0)
-    a3_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 1, dir_suffix)
-    a4_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 0, dir_suffix)
+    a1_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 2*index, dir_suffix)
+    a2_d7_plus = sample_ancilla_error(num_shots, 7, 'plus', index, dir_suffix)
+    a3_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 2*index+1, dir_suffix)
+    a4_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', index, dir_suffix)
     for round in range(num_batch):
         s_start = round * bs
         s_end = (round+1) * bs
@@ -260,7 +259,7 @@ def simulate_single_qubit_Clifford_rectangle(num_batch=150, gate_type='H'): # ex
     end = time.time()
     print(f"Total elasped time {end-start} seconds.")
 
-def simulate_CNOT_rectangle(num_batch=150): # extended rectangle for logical transversal CNOT between two blocks
+def simulate_CNOT_rectangle(num_batch=150, index=0): # extended rectangle for logical transversal CNOT between two blocks
     # correct phase-flip first, then bit-flip
     # target bit-flip > control phase-flip. IX > ZI
     ''' -------X--------------.------corr----.----------X--------------.-------
@@ -277,14 +276,14 @@ def simulate_CNOT_rectangle(num_batch=150): # extended rectangle for logical tra
     total_num_errors_control = 0; total_num_errors_target = 0
     num_shots = num_batch * bs
     start = time.time()
-    ca1_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 0, dir_suffix)
-    ca2_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 0, dir_suffix)
-    ca3_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 1, dir_suffix)
-    ca4_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 1, dir_suffix)
-    ta1_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 2, dir_suffix)
-    ta2_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 2, dir_suffix)
-    ta3_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 3, dir_suffix)
-    ta4_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 3, dir_suffix)
+    ca1_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 4*index, dir_suffix)
+    ca2_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 4*index, dir_suffix)
+    ca3_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 4*index+1, dir_suffix)
+    ca4_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 4*index+1, dir_suffix)
+    ta1_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 4*index+2, dir_suffix)
+    ta2_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 4*index+2, dir_suffix)
+    ta3_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 4*index+3, dir_suffix)
+    ta4_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', 4*index+3, dir_suffix)
     for round in range(num_batch):
         s_start = round * bs
         s_end = (round+1) * bs
@@ -361,12 +360,27 @@ def simulate_CNOT_rectangle_bit_first(num_batch=200): # extended rectangle for l
 
 
 if __name__ == "__main__":
-    p_CNOT = 0.0008
+    # Check if arguments have been provided
+    if len(sys.argv) != 4:
+        print("Usage: python script.py <integer> <integer> <double>")
+        sys.exit(1)
+    try:
+        # Get the integer from the command line argument
+        num_batch = int(sys.argv[1])
+        index = int(sys.argv[2])
+        error_rate = float(sys.argv[3])
+    except ValueError:
+        print("The argument must be an integer.")
+        sys.exit(1)
+    p_CNOT = error_rate
     p_single = p_CNOT/2
-    dir_suffix = ""
+    dir_suffix = "_p" + str(p_CNOT).split('.')[1]
     # dir_suffix = "_p003"
     # simulate_single_qubit_Clifford_rectangle(gate_type='H')
     # simulate_single_qubit_Clifford_rectangle(gate_type='S')
-    simulate_code_switching_rectangle()
-    # simulate_CNOT_rectangle()
+    for s in range(20):
+        # simulate_code_switching_rectangle(num_batch=1, index=index+s)
+        simulate_CNOT_rectangle(num_batch=1, index=index+s)
+    # simulate_code_switching_rectangle(num_batch=num_batch, index=index)
+    # simulate_CNOT_rectangle(num_batch=num_batch, index=index)
     # simulate_CNOT_rectangle_bit_first()

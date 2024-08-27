@@ -9,14 +9,21 @@ from functools import reduce
 
 N = 2 ** 7
 
-def sample_ancilla_error(num_shots, d, state, index):
-    with open(f"logs_prep_d{d}_{state}/propagation_dict.pkl", 'rb') as f:
-        prop_dict = pickle.load(f)
+def sample_ancilla_error(num_shots, d, state, index, factor=1.0):
+    if factor == 1.0:
+        with open(f"logs_prep_single_equal_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
+            prop_dict = pickle.load(f)
+    else:
+        with open(f"logs_prep_single_half_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
+            prop_dict = pickle.load(f)
 
-    with open(f"logs_prep_d{d}_{state}/{index}_single_fault.pkl", 'rb') as f:
+    parent_dir = "logs_prep_single_equal_CNOT" if factor == 1.0 else "logs_prep_single_half_CNOT"
+    parent_dir += f"/d{d}_{state}"
+
+    with open(f"{parent_dir}/{index}_single_fault.pkl", 'rb') as f:
         fault_dict = pickle.load(f)
 
-    with open(f"logs_prep_d{d}_{state}/{index}.log", 'r') as f:
+    with open(f"{parent_dir}/{index}.log", 'r') as f:
         lines = f.readlines(0)
         target_line = lines[-2].strip()
         match = re.search(r'Counter\((\{.*\})\)', target_line)
@@ -30,7 +37,7 @@ def sample_ancilla_error(num_shots, d, state, index):
 
     fault_dict["none"] = num_no_fault
 
-    with open(f"logs_prep_d{d}_{state}/{index}_faults.log", 'r') as f:
+    with open(f"{parent_dir}/{index}_faults.log", 'r') as f:
         lines = f.readlines(0)
         # print(f"number of lines in {index}_faults.log: {len(lines)}")
         for line in lines:
@@ -69,4 +76,4 @@ def sample_ancilla_error(num_shots, d, state, index):
     # print(wts.max(), wts.min())
     return ancilla_errors
 
-sample_ancilla_error(200*1024, 15, 'zero', 0)
+# sample_ancilla_error(200*1024, 15, 'zero', 0)

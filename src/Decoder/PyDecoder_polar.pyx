@@ -5,10 +5,10 @@ from PyDecoder_polar cimport Decoder_polar_SCL
 
 cdef class PyDecoder_polar_SCL:
 
-	def __cinit__(self, int r):
+	def __cinit__(self, int r, int m=7):
 		self.MEM_ALLOCATED = False
-		self.m = 7
-		self.N = 128
+		self.m = m
+		self.N = int(2 ** m)
 		self.list_size = 8
 		self.K = 0 # depends on order r
 		self.r = r

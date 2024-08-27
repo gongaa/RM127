@@ -40,260 +40,260 @@ a2_permute = [Ax(A2, i) for i in range(N-1)]
 a3_permute = [Ax(A3, i) for i in range(N-1)]
 a4_permute = [Ax(A4, i) for i in range(N-1)]
 
-p_CNOT = 0.0008
-p_meas = p_CNOT/2
-p_prep = p_meas
-parent_dir = "logs_prep_d7_plus_p"+str(p_CNOT).split('.')[1]
-
-print(f"p_CNOT={p_CNOT}, p_measure={p_meas}, p_preparation={p_prep}")
-
-circuit = stim.Circuit()
-error_copy_circuit = stim.Circuit()
-
-tick_circuits = [] # for PauliString.after
-
-
-# ancilla 1
-for i in range(1, N):
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("RX", a1_permute[N-1-i])
-        circuit.append("Z_ERROR", a1_permute[N-1-i], p_prep)
-    else:
-        circuit.append("R", a1_permute[N-1-i])
-        circuit.append("X_ERROR", a1_permute[N-1-i], p_prep)
-circuit.append("RX", N-1)
-
-# ancilla 2
-for i in range(1, N):
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("RX", N + a2_permute[N-1-i])
-        circuit.append("Z_ERROR", N + a2_permute[N-1-i], p_prep)
-    else:
-        circuit.append("R", N + a2_permute[N-1-i])
-        circuit.append("X_ERROR", N + a2_permute[N-1-i], p_prep)
-circuit.append("RX", N+N-1)
-
-# ancilla 3
-for i in range(1, N):
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("RX", 2*N + a3_permute[N-1-i])
-        circuit.append("Z_ERROR", 2*N + a3_permute[N-1-i], p_prep)
-    else:
-        circuit.append("R", 2*N + a3_permute[N-1-i])
-        circuit.append("X_ERROR", 2*N + a3_permute[N-1-i], p_prep)
-circuit.append("RX", 2*N+N-1)
-
-# ancilla 4
-for i in range(1, N):
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("RX", 3*N + a4_permute[N-1-i])
-        circuit.append("Z_ERROR", 3*N + a4_permute[N-1-i], p_prep)
-    else:
-        circuit.append("R", 3*N + a4_permute[N-1-i])
-        circuit.append("X_ERROR", 3*N + a4_permute[N-1-i], p_prep)
-circuit.append("RX", 3*N+N-1)
-
-circuit.append("TICK")
-
-for r in range(n): # rounds
-    sep = 2 ** r
-    tick_circuit = stim.Circuit()
-    for j in range(0, N, 2*sep):
-        for i in range(sep):
-            if j+i+sep < N-1:
-                circuit.append("CNOT", [a1_permute[j+i], a1_permute[j+i+sep]])
-                tick_circuit.append("CNOT", [a1_permute[j+i], a1_permute[j+i+sep]])
-                circuit.append("DEPOLARIZE2", [a1_permute[j+i], a1_permute[j+i+sep]], p_CNOT)
-                circuit.append("CNOT", [N + a2_permute[j+i], N + a2_permute[j+i+sep]])
-                tick_circuit.append("CNOT", [N + a2_permute[j+i], N + a2_permute[j+i+sep]])
-                circuit.append("DEPOLARIZE2", [N + a2_permute[j+i], N + a2_permute[j+i+sep]], p_CNOT)
-                circuit.append("CNOT", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]])
-                tick_circuit.append("CNOT", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]])
-                circuit.append("DEPOLARIZE2", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]], p_CNOT)
-                circuit.append("CNOT", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]])
-                tick_circuit.append("CNOT", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]])
-                circuit.append("DEPOLARIZE2", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]], p_CNOT)
-
-    circuit.append("TICK")
-    tick_circuits.append(tick_circuit)
-
-# X error detection first, because there are much more X error test than Z error test
-# copy X error from ancilla 1 to 2, and 3 to 4
-for i in range(N-1):
-    circuit.append("CNOT", [i, N+i])
-    circuit.append("DEPOLARIZE2", [i, N+i], p_CNOT)
-    error_copy_circuit.append("CNOT", [i, N+i])
-    circuit.append("CNOT", [2*N+i, 2*N+N+i])
-    circuit.append("DEPOLARIZE2", [2*N+i, 2*N+N+i], p_CNOT)
-    error_copy_circuit.append("CNOT", [2*N+i, 2*N+N+i])
-circuit.append("TICK")
-tick_circuits.append(error_copy_circuit)
-
-# in experiments, here one needs to measure ancilla 2 & 4 bitwise
-# add noise to ancilla 2 & 4 here, even though they are already captured by DEPOLARIZE on CNOTs
-for i in range(N-1):
-    circuit.append("X_ERROR", N+i, p_meas)
-    circuit.append("X_ERROR", 3*N+i, p_meas)
-# and do classical (noisyless) processing to see if accepted
-# Stim unencode is faster than my own implementation, hence I use Stim here
-# unencode of ancilla 2 & 4 for acceptance
-for r in range(n):
-    sep = 2 ** r
-    for j in range(0, N, 2*sep):
-        for i in range(sep):
-            circuit.append("CNOT", [N+j+i, N+j+i+sep])    
-            circuit.append("CNOT", [3*N+j+i, 3*N+j+i+sep])    
-
-# ancilla 2 bit flip detection
-num_a2_detector = 0
-detector_str = ""
-j = 0
-for i in range(1, N)[::-1]:
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("MX", N+N-1-i)
-    else:
-        circuit.append("M", N+N-1-i)
-        detector_str += f"DETECTOR rec[{-N+j}]\n"
-        num_a2_detector += 1
-    j += 1
-circuit.append("MX", N+N-1)
-
-detector_circuit = stim.Circuit(detector_str)
-circuit += detector_circuit
-print(f"#detectors put on a2: {num_a2_detector}")
-
-# ancilla 4 bit flip detection
-num_a4_detector = 0
-detector_str = ""
-j = 0
-for i in range(1, N)[::-1]:
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("MX", 3*N+N-1-i)
-    else:
-        circuit.append("M", 3*N+N-1-i)
-        detector_str += f"DETECTOR rec[{-N+j}]\n"
-        num_a4_detector += 1
-    j += 1
-circuit.append("MX", 3*N+N-1)
-  
-detector_circuit = stim.Circuit(detector_str)
-circuit += detector_circuit
-print(f"#detectors put on a4: {num_a4_detector}")
-
-error_copy_circuit = stim.Circuit()
-# copy Z-error from ancilla 1 to 3
-# CNOT pointing from 3 to 1
-for i in range(N-1):
-    circuit.append("CNOT", [2*N+i, i])
-    circuit.append("DEPOLARIZE2", [2*N+i, i], p_CNOT)
-    error_copy_circuit.append("CNOT", [2*N+i, i])
-    
-tick_circuits.append(error_copy_circuit)
-
-# measure ancilla 3 bitwise in X-basis in experiments
-for i in range(N-1):
-    circuit.append("Z_ERROR", 2*N+i, p_meas)
-# Stim processing for acceptance
-for r in range(n):
-    sep = 2 ** r
-    for j in range(0, N, 2*sep):
-        for i in range(sep):
-            circuit.append("CNOT", [2*N+j+i, 2*N+j+i+sep])    
-
-# ancilla 3 phase flip detection
-num_a3_detector = 0
-detector_str = ""
-j = 0
-for i in range(1, N)[::-1]:
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("MX", 2*N+N-1-i)
-        detector_str += f"DETECTOR rec[{-N+j}]\n"
-        num_a3_detector += 1
-    else:
-        circuit.append("M", 2*N+N-1-i)
-    j += 1
-circuit.append("MX", 2*N+N-1)
-
-detector_circuit = stim.Circuit(detector_str)
-circuit += detector_circuit
-print(f"#detectors put on a3: {num_a3_detector}")
-
-# ancilla 1 detectors to see residual errors
-for r in range(n):
-    sep = 2 ** r
-    for j in range(0, N, 2*sep):
-        for i in range(sep):
-            circuit.append("CNOT", [j+i, j+i+sep])    
-    
-for i in range(1, N)[::-1]:
-    if bin_wt(i) >= wt_thresh:
-        circuit.append("MX", N-1-i)
-    else:
-        circuit.append("M", N-1-i)
-circuit.append("MX", N-1)
-num_a1_detector = 0
-detector_str = ""
-for i in range(N):
-    detector_str += f"DETECTOR rec[{-N+i}]\n"
-    num_a1_detector += 1
-detector_circuit = stim.Circuit(detector_str)
-circuit += detector_circuit
-print(f"#detectors put on a1: {num_a1_detector}")
-
-
-num_flag_detector = num_a2_detector + num_a3_detector + num_a4_detector
-dem: stim.DetectorErrorModel = circuit.detector_error_model()
-dem_sampler: stim.CompiledDemSampler = dem.compile_sampler()
-flat_error_instructions: List[stim.DemInstruction] = [
-    instruction
-    for instruction in dem.flattened()
-    if instruction.type == 'error'
-]
-
-# start = time.time()
-# prop_dict = {}
-# print(f"total {len(flat_error_instructions)} instructions")
-# for i in range(len(flat_error_instructions)):
-#     dem_filter = stim.DetectorErrorModel()
-#     dem_filter.append(flat_error_instructions[i])
-#     explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem_filter, reduce_to_one_representative_error=True)
-#     final_pauli_strings = []
-#     for err in explained_errors:
-#         rep_loc = err.circuit_error_locations[0]
-#         tick = rep_loc.tick_offset
-#         final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick:])
-#         final_pauli_strings.append(final_pauli_string)
-#     final_pauli_product = reduce(stim.PauliString.__mul__, final_pauli_strings, stim.PauliString(4*N))
-#     final_pauli_product = final_pauli_product[:N]
-#     final_wt = final_pauli_product.weight
-#     print(f"instruction {i}, final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}")
-#     prop_dict[i] = final_pauli_product
-# end = time.time()
-# with open(f"{parent_dir}/propagation_dict.pkl", 'wb') as f:
-#     pickle.dump(prop_dict, f)
-# print(f"Total Elapsed time: {end-start}")   
-    
-
-combined_counter = Counter({}) 
-combined_one_fault_dict = Counter({})
-
 if __name__ == "__main__":
     # Check if an argument has been provided
-    if len(sys.argv) != 2:
-        print("Usage: python script.py <integer>")
+    if len(sys.argv) != 3:
+        print("Usage: python script.py <integer> <double>")
         sys.exit(1)
-
     try:
-        # Get the integer from the command line argument
         input_value = int(sys.argv[1])
+        error_rate = float(sys.argv[2])
     except ValueError:
         print("The argument must be an integer.")
         sys.exit(1)
         
-    print(f"writing to {parent_dir}/{input_value}.log", flush=True)
-    total_passed = 0
+    p_CNOT = error_rate
+    factor = 1.0 # or 0.5
+    p_meas = factor * p_CNOT
+    p_prep = p_meas
     num_rounds = 2500
     num_shots = 100000
+    parent_dir = "logs_prep_single_equal_CNOT/" if factor == 1.0 else "logs_prep_single_half_CNOT/"
+    parent_dir += "d7_plus"
+    parent_dir += '/p' + str(p_CNOT).split('.')[1] # comment this line out if generating propagation_dict
+    print(f"full_prep_sim_d7_plus.py writing to {parent_dir}/{input_value}.log", flush=True)
+    print(f"p_CNOT={p_CNOT}, p_measure={p_meas}, p_preparation={p_prep}")
+
+    circuit = stim.Circuit()
+    error_copy_circuit = stim.Circuit()
+
+    tick_circuits = [] # for PauliString.after
+
+
+    # ancilla 1
+    for i in range(1, N):
+        if bin_wt(i) >= wt_thresh:
+            circuit.append("RX", a1_permute[N-1-i])
+            circuit.append("Z_ERROR", a1_permute[N-1-i], p_prep)
+        else:
+            circuit.append("R", a1_permute[N-1-i])
+            circuit.append("X_ERROR", a1_permute[N-1-i], p_prep)
+    circuit.append("RX", N-1)
+
+    # ancilla 2
+    for i in range(1, N):
+        if bin_wt(i) >= wt_thresh:
+            circuit.append("RX", N + a2_permute[N-1-i])
+            circuit.append("Z_ERROR", N + a2_permute[N-1-i], p_prep)
+        else:
+            circuit.append("R", N + a2_permute[N-1-i])
+            circuit.append("X_ERROR", N + a2_permute[N-1-i], p_prep)
+    circuit.append("RX", N+N-1)
+
+    # ancilla 3
+    for i in range(1, N):
+        if bin_wt(i) >= wt_thresh:
+            circuit.append("RX", 2*N + a3_permute[N-1-i])
+            circuit.append("Z_ERROR", 2*N + a3_permute[N-1-i], p_prep)
+        else:
+            circuit.append("R", 2*N + a3_permute[N-1-i])
+            circuit.append("X_ERROR", 2*N + a3_permute[N-1-i], p_prep)
+    circuit.append("RX", 2*N+N-1)
+
+    # ancilla 4
+    for i in range(1, N):
+        if bin_wt(i) >= wt_thresh:
+            circuit.append("RX", 3*N + a4_permute[N-1-i])
+            circuit.append("Z_ERROR", 3*N + a4_permute[N-1-i], p_prep)
+        else:
+            circuit.append("R", 3*N + a4_permute[N-1-i])
+            circuit.append("X_ERROR", 3*N + a4_permute[N-1-i], p_prep)
+    circuit.append("RX", 3*N+N-1)
+
+    circuit.append("TICK")
+
+    for r in range(n): # rounds
+        sep = 2 ** r
+        tick_circuit = stim.Circuit()
+        for j in range(0, N, 2*sep):
+            for i in range(sep):
+                if j+i+sep < N-1:
+                    circuit.append("CNOT", [a1_permute[j+i], a1_permute[j+i+sep]])
+                    tick_circuit.append("CNOT", [a1_permute[j+i], a1_permute[j+i+sep]])
+                    circuit.append("DEPOLARIZE2", [a1_permute[j+i], a1_permute[j+i+sep]], p_CNOT)
+                    circuit.append("CNOT", [N + a2_permute[j+i], N + a2_permute[j+i+sep]])
+                    tick_circuit.append("CNOT", [N + a2_permute[j+i], N + a2_permute[j+i+sep]])
+                    circuit.append("DEPOLARIZE2", [N + a2_permute[j+i], N + a2_permute[j+i+sep]], p_CNOT)
+                    circuit.append("CNOT", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]])
+                    tick_circuit.append("CNOT", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]])
+                    circuit.append("DEPOLARIZE2", [2*N + a3_permute[j+i], 2*N + a3_permute[j+i+sep]], p_CNOT)
+                    circuit.append("CNOT", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]])
+                    tick_circuit.append("CNOT", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]])
+                    circuit.append("DEPOLARIZE2", [3*N + a4_permute[j+i], 3*N + a4_permute[j+i+sep]], p_CNOT)
+
+        circuit.append("TICK")
+        tick_circuits.append(tick_circuit)
+
+    # X error detection first, because there are much more X error test than Z error test
+    # copy X error from ancilla 1 to 2, and 3 to 4
+    for i in range(N-1):
+        circuit.append("CNOT", [i, N+i])
+        circuit.append("DEPOLARIZE2", [i, N+i], p_CNOT)
+        error_copy_circuit.append("CNOT", [i, N+i])
+        circuit.append("CNOT", [2*N+i, 2*N+N+i])
+        circuit.append("DEPOLARIZE2", [2*N+i, 2*N+N+i], p_CNOT)
+        error_copy_circuit.append("CNOT", [2*N+i, 2*N+N+i])
+    circuit.append("TICK")
+    tick_circuits.append(error_copy_circuit)
+
+    # in experiments, here one needs to measure ancilla 2 & 4 bitwise
+    # add noise to ancilla 2 & 4 here, even though they are already captured by DEPOLARIZE on CNOTs
+    for i in range(N-1):
+        circuit.append("X_ERROR", N+i, p_meas)
+        circuit.append("X_ERROR", 3*N+i, p_meas)
+    # and do classical (noisyless) processing to see if accepted
+    # Stim unencode is faster than my own implementation, hence I use Stim here
+    # unencode of ancilla 2 & 4 for acceptance
+    for r in range(n):
+        sep = 2 ** r
+        for j in range(0, N, 2*sep):
+            for i in range(sep):
+                circuit.append("CNOT", [N+j+i, N+j+i+sep])    
+                circuit.append("CNOT", [3*N+j+i, 3*N+j+i+sep])    
+
+    # ancilla 2 bit flip detection
+    num_a2_detector = 0
+    detector_str = ""
+    j = 0
+    for i in range(1, N)[::-1]:
+        if bin_wt(i) >= wt_thresh:
+            circuit.append("MX", N+N-1-i)
+        else:
+            circuit.append("M", N+N-1-i)
+            detector_str += f"DETECTOR rec[{-N+j}]\n"
+            num_a2_detector += 1
+        j += 1
+    circuit.append("MX", N+N-1)
+
+    detector_circuit = stim.Circuit(detector_str)
+    circuit += detector_circuit
+    print(f"#detectors put on a2: {num_a2_detector}")
+
+    # ancilla 4 bit flip detection
+    num_a4_detector = 0
+    detector_str = ""
+    j = 0
+    for i in range(1, N)[::-1]:
+        if bin_wt(i) >= wt_thresh:
+            circuit.append("MX", 3*N+N-1-i)
+        else:
+            circuit.append("M", 3*N+N-1-i)
+            detector_str += f"DETECTOR rec[{-N+j}]\n"
+            num_a4_detector += 1
+        j += 1
+    circuit.append("MX", 3*N+N-1)
+    
+    detector_circuit = stim.Circuit(detector_str)
+    circuit += detector_circuit
+    print(f"#detectors put on a4: {num_a4_detector}")
+
+    error_copy_circuit = stim.Circuit()
+    # copy Z-error from ancilla 1 to 3
+    # CNOT pointing from 3 to 1
+    for i in range(N-1):
+        circuit.append("CNOT", [2*N+i, i])
+        circuit.append("DEPOLARIZE2", [2*N+i, i], p_CNOT)
+        error_copy_circuit.append("CNOT", [2*N+i, i])
+        
+    tick_circuits.append(error_copy_circuit)
+
+    # measure ancilla 3 bitwise in X-basis in experiments
+    for i in range(N-1):
+        circuit.append("Z_ERROR", 2*N+i, p_meas)
+    # Stim processing for acceptance
+    for r in range(n):
+        sep = 2 ** r
+        for j in range(0, N, 2*sep):
+            for i in range(sep):
+                circuit.append("CNOT", [2*N+j+i, 2*N+j+i+sep])    
+
+    # ancilla 3 phase flip detection
+    num_a3_detector = 0
+    detector_str = ""
+    j = 0
+    for i in range(1, N)[::-1]:
+        if bin_wt(i) >= wt_thresh:
+            circuit.append("MX", 2*N+N-1-i)
+            detector_str += f"DETECTOR rec[{-N+j}]\n"
+            num_a3_detector += 1
+        else:
+            circuit.append("M", 2*N+N-1-i)
+        j += 1
+    circuit.append("MX", 2*N+N-1)
+
+    detector_circuit = stim.Circuit(detector_str)
+    circuit += detector_circuit
+    print(f"#detectors put on a3: {num_a3_detector}")
+
+    # ancilla 1 detectors to see residual errors
+    for r in range(n):
+        sep = 2 ** r
+        for j in range(0, N, 2*sep):
+            for i in range(sep):
+                circuit.append("CNOT", [j+i, j+i+sep])    
+        
+    for i in range(1, N)[::-1]:
+        if bin_wt(i) >= wt_thresh:
+            circuit.append("MX", N-1-i)
+        else:
+            circuit.append("M", N-1-i)
+    circuit.append("MX", N-1)
+    num_a1_detector = 0
+    detector_str = ""
+    for i in range(N):
+        detector_str += f"DETECTOR rec[{-N+i}]\n"
+        num_a1_detector += 1
+    detector_circuit = stim.Circuit(detector_str)
+    circuit += detector_circuit
+    print(f"#detectors put on a1: {num_a1_detector}")
+
+
+    num_flag_detector = num_a2_detector + num_a3_detector + num_a4_detector
+    dem: stim.DetectorErrorModel = circuit.detector_error_model()
+    dem_sampler: stim.CompiledDemSampler = dem.compile_sampler()
+    flat_error_instructions: List[stim.DemInstruction] = [
+        instruction
+        for instruction in dem.flattened()
+        if instruction.type == 'error'
+    ]
+
+    # start = time.time()
+    # prop_dict = {}
+    # print(f"total {len(flat_error_instructions)} instructions")
+    # for i in range(len(flat_error_instructions)):
+    #     dem_filter = stim.DetectorErrorModel()
+    #     dem_filter.append(flat_error_instructions[i])
+    #     explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem_filter, reduce_to_one_representative_error=True)
+    #     final_pauli_strings = []
+    #     for err in explained_errors:
+    #         rep_loc = err.circuit_error_locations[0]
+    #         tick = rep_loc.tick_offset
+    #         final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, 4*N), tick_circuits[tick:])
+    #         final_pauli_strings.append(final_pauli_string)
+    #     final_pauli_product = reduce(stim.PauliString.__mul__, final_pauli_strings, stim.PauliString(4*N))
+    #     final_pauli_product = final_pauli_product[:N]
+    #     final_wt = final_pauli_product.weight
+    #     print(f"instruction {i}, final wt on output after copying: {final_wt}. X: {final_pauli_product.pauli_indices('X')}, Y: {final_pauli_product.pauli_indices('Y')}, Z: {final_pauli_product.pauli_indices('Z')}")
+    #     prop_dict[i] = final_pauli_product
+    # end = time.time()
+    # with open(f"{parent_dir}/propagation_dict.pkl", 'wb') as f:
+    #     pickle.dump(prop_dict, f)
+    # print(f"Total Elapsed time: {end-start}")   
+    
+    generation_start = time.time()
+    combined_counter = Counter({}) 
+    combined_one_fault_dict = Counter({})
+    total_passed = 0
     fault_locations = ""
     for round in range(num_rounds):
         start = time.time()
@@ -348,7 +348,8 @@ if __name__ == "__main__":
             
     print(f"Among {num_rounds * num_shots} samples, {total_passed} passed.")
     print("Counter for among all passed samples, how many faults occured:", combined_counter, flush=True)
-    print("number of passing one fault location:", len(combined_one_fault_dict), flush=True)
+    print("Number of passing one fault location:", len(combined_one_fault_dict), flush=True)
+    print(f"Total elaspsed time: {time.time() - generation_start} seconds", flush=True)
     with open(f"{parent_dir}/{input_value}_faults.log", 'w') as f:
         f.write(fault_locations)
     with open(f"{parent_dir}/{input_value}_single_fault.pkl", 'wb') as f:

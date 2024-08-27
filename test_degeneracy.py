@@ -12,7 +12,7 @@ decoder_X = PyDecoder_polar_SCL(rx)
 decoder_Z = PyDecoder_polar_SCL(rz)
 state = "plus"
     
-log_files = glob.glob(os.path.join(f'logs_prep_d{d}_{state}_p0008', '*.log'))
+log_files = glob.glob(os.path.join(f'logs_prep_d{d}_{state}_p005', '*.log'))
 
 for log_file in log_files:
     print(log_file)

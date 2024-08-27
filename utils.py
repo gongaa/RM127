@@ -58,7 +58,7 @@ def sample_ancilla_error(num_shots, d, state, index, dir_suffix=""):
         if match:
             counter_dict_str = match.group(1) # extract the dictionary part
             counter_dict = eval(counter_dict_str) # evaluate dict string into dict
-            print(counter_dict)
+            # print(counter_dict)
             counter_obj = Counter(counter_dict)
             num_no_fault = counter_obj[0]
 
@@ -66,7 +66,7 @@ def sample_ancilla_error(num_shots, d, state, index, dir_suffix=""):
 
     with open(f"{parent_dir}/{index}_faults.log", 'r') as f:
         lines = f.readlines(0)
-        print(f"number of lines in {index}_faults.log: {len(lines)}")
+        # print(f"number of lines in {index}_faults.log: {len(lines)}")
         for line in lines:
             line = line.strip()[1:-1]
             string_values = line.split()
@@ -76,12 +76,12 @@ def sample_ancilla_error(num_shots, d, state, index, dir_suffix=""):
             else:
                 fault_dict[int_values] = 0
 
-    print("length of fault_dict to sample from:", len(fault_dict))
+    # print("length of fault_dict to sample from:", len(fault_dict))
 
     start = time.time()
     ancilla = random.sample(list(fault_dict.keys()), num_shots, counts=list(fault_dict.values()))
     end = time.time()
-    print(f"sampling {num_shots} samples from {parent_dir} took {end-start} seconds")
+    # print(f"sampling {num_shots} samples from {parent_dir} took {end-start} seconds")
 
     ancilla_errors = []
     for a in ancilla:
