@@ -29,7 +29,7 @@ suffix = "d" + d + "_" + state
 if phase_first == 'y' and d == '7':
     suffix += "_phase_first"
 filename = "full_prep_sim_" + suffix + ".py"
-parent_dir = "logs_prep_single_equal_CNOT/" if factor == '1.0' else "logs_prep_single_half_CNOT/"
+parent_dir = "logs_prep_SPAM_equal_CNOT/" if factor == '1.0' else "logs_prep_SPAM_half_CNOT/"
 
 
 def run_exp(s, p):
@@ -46,6 +46,8 @@ def run_exp(s, p):
     # print(cmd, dest)
     process = subprocess.Popen(['sbatch', '--mem-per-cpu', '3000', '--time', runtime+':00:00', '--output', dest, '--wrap', cmd])
 
-for p in [0.005, 0.004, 0.003, 0.002, 0.001, 0.0008, 0.0005, 0.0002, 0.0001]:
+# for p in [0.005, 0.004, 0.003, 0.002, 0.001, 0.0008, 0.0005, 0.0002, 0.0001]:
+# for p in [0.005, 0.004, 0.003, 0.002, 0.001]:
+for p in [0.001,0.002]:
     for s in range(int(n)):
-        run_exp(s, p)
+        run_exp(12+s, p)

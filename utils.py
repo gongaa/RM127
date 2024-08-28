@@ -2,7 +2,7 @@ from typing import List
 import stim
 import numpy as np
 import random # random.choice with counts require python>3.11
-import time, re, pickle
+import time, re, pickle, sys
 from collections import  Counter
 from functools import reduce
 
@@ -42,18 +42,24 @@ def x_component(s):
     x, z = s.to_numpy()
     return stim.PauliString.from_numpy(xs=x, zs=np.zeros_like(z, dtype=np.bool_))
 
-def sample_ancilla_error(num_shots, d, state, index, dir_suffix=""):
+def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0):
     N = 128
-    parent_dir = f"logs_prep_d{d}_{state}" + dir_suffix
-    with open(f"{parent_dir}/propagation_dict.pkl", 'rb') as f:
-        prop_dict = pickle.load(f)
+    if factor == 1.0:
+        with open(f"logs_prep_SPAM_equal_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
+            prop_dict = pickle.load(f)
+    else:
+        with open(f"logs_prep_SPAM_half_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
+            prop_dict = pickle.load(f)
+
+    parent_dir = "logs_prep_SPAM_equal_CNOT" if factor == 1.0 else "logs_prep_SPAM_half_CNOT"
+    parent_dir += f"/d{d}_{state}/{dir_error_rate}"
 
     with open(f"{parent_dir}/{index}_single_fault.pkl", 'rb') as f:
         fault_dict = pickle.load(f)
 
     with open(f"{parent_dir}/{index}.log", 'r') as f:
         lines = f.readlines(0)
-        target_line = lines[-2].strip()
+        target_line = lines[-3 if factor==1.0 else -2].strip() # TODO: change to just -3 before release
         match = re.search(r'Counter\((\{.*\})\)', target_line)
         if match:
             counter_dict_str = match.group(1) # extract the dictionary part
@@ -61,6 +67,9 @@ def sample_ancilla_error(num_shots, d, state, index, dir_suffix=""):
             # print(counter_dict)
             counter_obj = Counter(counter_dict)
             num_no_fault = counter_obj[0]
+            print("Counter:", counter_obj)
+        else:
+            sys.exit("Extract counter failed, abort!")
 
     fault_dict["none"] = num_no_fault
 

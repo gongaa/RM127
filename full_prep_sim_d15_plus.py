@@ -59,7 +59,7 @@ if __name__ == "__main__":
     p_prep = p_meas
     num_rounds = 2500
     num_shots = 100000
-    parent_dir = "logs_prep_single_equal_CNOT/" if factor == 1.0 else "logs_prep_single_half_CNOT/"
+    parent_dir = "logs_prep_SPAM_equal_CNOT/" if factor == 1.0 else "logs_prep_SPAM_half_CNOT/"
     parent_dir += "d15_plus"
     parent_dir += '/p' + str(p_CNOT).split('.')[1] # comment this line out if generating propagation_dict
     print(f"full_prep_sim_d15_plus.py writing to {parent_dir}/{input_value}.log", flush=True)
