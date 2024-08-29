@@ -1,7 +1,7 @@
 build/*
 logs*/*
 old_logs/*
-test_strict_FT/*
+test_strict_FT*/*
 slurm*
 .ipynb_checkpoints
 .vscode

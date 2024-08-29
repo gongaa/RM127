@@ -228,7 +228,7 @@ def simulate_code_switching_rectangle(num_batch=1000, index=0):    # batch size 
         # TODO: double-check logical T gate 
         residual_errors = logical_T(residual_errors_b2)
         residual_errors_b3, error_mask_phase = phase_flip_EC_block(input_errors=residual_errors, ancilla_errors=a3_d15_zero[s_start:s_end], decoder=decoder_r4, disable_correction_error=True, avg_flip=avg_Z_flip)
-        residual_errors_b4, error_mask_bit = bit_flip_EC_block(input_errors=residual_errors_b3, ancilla_errors=a4_d15_plus[s_start:s_end], decoder=decoder_r3, disable_correction_error=True, avg_flip=avg_X_flip)
+        residual_errors_b4, error_mask_bit = bit_flip_EC_block(input_errors=residual_errors_b3, ancilla_errors=a4_d15_plus[s_start:s_end], decoder=decoder_r3, avg_flip=avg_X_flip)
         total_num_errors += np.logical_or(error_mask_phase, error_mask_bit).astype(int).sum()
         total_Z_errors += sum(error_mask_phase)
         total_X_errors += sum(error_mask_bit)
@@ -384,6 +384,7 @@ if __name__ == "__main__":
     parser.add_argument("-fs", "--factor_single", type=float, choices=[0.1, 0.2, 1.0], default=1.0, help="the ratio of p_single to p_CNOT, choose between [0.1, 0.2, 1.0]")
     parser.add_argument("-fc", "--factor_correction", type=float, choices=[0.0, 0.1, 0.2, 1.0], default=1.0, help="the ratio of p_correction to p_CNOT, choose between [0.0, 0.1, 0.2, 1.0]")
     parser.add_argument("-bs", "--batch_size", type=int, default=1024, help="batch size, please use a multiple of 256, default to 1024")
+    parser.add_argument("--index", type=int, default=0, help="index of the file")
     parser.add_argument("--num_batch", type=int, default=100, help="number of batch")
     parser.add_argument("--p_CNOT", type=float, help="physical error rate of CNOT")
     parser.add_argument("-t", "--rec_type", choices=["CNOT", "H", "S", "T"], help="type of the exRec, choose between [CNOT, H, S, T]")
@@ -400,7 +401,7 @@ if __name__ == "__main__":
     p_correction = factor_correction * p_CNOT # single qubit addressing, arbitrary Pauli string
     rec_type = args.rec_type
     pft = args.pauli_frame_tracking
-    print(f"p_CNOT={p_CNOT}, p_SPAM={p_SPAM}, p_single={p_single}, p_correction={p_correction}, exRec type={rec_type}, Pauli Frame Tracking={pft}")
+    print(f"p_CNOT={p_CNOT}, p_SPAM={p_SPAM}, p_single={p_single}, p_correction={p_correction}, exRec type={rec_type}, Pauli Frame Tracking={pft}, index={args.index}")
     dir_error_rate = "p" + str(p_CNOT).split('.')[1]
     if rec_type in ["H", "S"]:
         simulate_single_qubit_Clifford_rectangle(gate_type=rec_type)
@@ -411,7 +412,7 @@ if __name__ == "__main__":
         # simulate_CNOT_rectangle_bit_first()
 
     else: # T gate implemented through code switching
-        simulate_code_switching_rectangle(num_batch=num_batch, index=0)
+        simulate_code_switching_rectangle(num_batch=num_batch, index=args.index)
 
     # for s in range(20):
         # simulate_code_switching_rectangle(num_batch=1, index=index+s)

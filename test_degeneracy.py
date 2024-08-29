@@ -5,7 +5,7 @@ import re
 
 pattern = re.compile(r"^final wt on output .* X: \[(.*?)\], Y: \[(.*?)\], Z: \[(.*?)\]")
 # pattern = re.compile(r"^final wt after copying: .* X: \[(.*?)\], Y: \[(.*?)\], Z: \[(.*?)\]")
-d = 7 
+d = 15
 rz = 4 if d==7 else 3
 rx = 2 if d==7 else 3
 decoder_X = PyDecoder_polar_SCL(rx)

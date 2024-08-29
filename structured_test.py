@@ -9,6 +9,7 @@ import itertools
 import random
 from functools import reduce
 from PyDecoder_polar import PyDecoder_polar_SCL
+from utils import propagate, form_pauli_string
 import pickle
 from pathlib import Path
 from multiprocessing import Process
@@ -16,12 +17,35 @@ from multiprocessing import Process
 n = 7
 N = 2 ** n
 d = 15
-if d == 7:
+if d == 15:
     wt_thresh = n - (n-1)//3 # for [[127,1,7]]
 elif d == 15:
     wt_thresh = n - (n-1)//2 # for [[127,1,15]]
 else:
     print("unsupported distance", d)
+
+####################### Settings ######################
+state = '0'
+flip_type = 0  # 0 for X-flip, 1 for Z-flip
+# d = 15
+if d == 15:
+    if state == '0' and flip_type == 1: # for zero state X-flip test fist (separately on A1A2 and A3A4), then Z-flip test (errors from all four ancilla can contribute)
+        second_test = True
+    elif state == '+' and flip_type == 0: # for plus state Z-flip test first
+        second_test = True
+    else:
+        second_test = False
+
+if d == 7:
+    if flip_type == 1: # for d=7 plus state also bit-flip test first (more detectors)
+        second_test = True
+    elif flip_type == 0:
+        second_test = False
+
+residual = [0,1] if second_test else [0,2]
+parent_dir = f"test_strict_FT_state{state}_{'Z' if flip_type else 'X'}"
+print("saving dictionaries to directory", parent_dir)
+#######################################################
 
 bin_wt = lambda i: bin(i)[2:].count('1')
 bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
@@ -29,42 +53,10 @@ bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
 int2bin = lambda i: [int(c) for c in bin(i)[2:].rjust(n, '0')]
 bin2int = lambda l: int(''.join(map(str, l)), 2)
 
-def ce(exclude, l=0, u=n): # choose except
-    choices = set(range(l,u)) - set([exclude])
-    return random.choice(list(choices))
-
 def Eij(i,j):
     A = np.eye(n, dtype=int)
     A[i,j] = 1
     return A
-
-def propagate(
-    pauli_string: stim.PauliString,
-    circuits: List[stim.Circuit]
-) -> stim.PauliString:
-    for circuit in circuits:
-        pauli_string = pauli_string.after(circuit)
-    return pauli_string
-
-def form_pauli_string(
-    flipped_pauli_product: List[stim.GateTargetWithCoords],
-    num_qubits: int = N,
-) -> stim.PauliString:
-    xs = np.zeros(num_qubits, dtype=np.bool_)
-    zs = np.zeros(num_qubits, dtype=np.bool_)
-    for e in flipped_pauli_product:
-        target_qubit, pauli_type = e.gate_target.value, e.gate_target.pauli_type
-        if target_qubit >= num_qubits:
-            continue
-        if pauli_type == 'X':
-            xs[target_qubit] = 1
-        elif pauli_type == 'Z':
-            zs[target_qubit] = 1
-        elif pauli_type == 'Y':
-            xs[target_qubit] = 1
-            zs[target_qubit] = 1
-    s = stim.PauliString.from_numpy(xs=xs, zs=zs)
-    return s
 
 def dict_to_csc_matrix(elements_dict, shape):
     # Constructs a `scipy.sparse.csc_matrix` check matrix from a dictionary `elements_dict` 
@@ -106,7 +98,7 @@ def dem_to_check_matrices(dem: stim.DetectorErrorModel, circuit, num_detector, t
         # store error representative location
         error_dict[hid] = rep_loc
         # propagate error to the end of the circuit to create an residual fault PCM
-        final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product), tick_circuits[rep_loc.tick_offset:])
+        final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, N), tick_circuits[rep_loc.tick_offset:])
         final_wt = final_pauli_string.weight
         if verbose:
             print(rep_loc)
@@ -161,7 +153,7 @@ def get_pcm(permute, flip_type, verbose=False): # set flip_type to 0 for X-flips
             circuit.append("R", permute[i])
             circuit.append("X_ERROR", permute[i], p_single)
     circuit.append("R", N-1)
-    circuit.append("TICK") ############################# TODO: fix bug
+    circuit.append("TICK")
 
     for r in range(n): # rounds
         sep = 2 ** r
@@ -281,7 +273,7 @@ def get_plus_pcm(permute, flip_type, verbose=False): # set flip_type to 0 for X-
     pcm = pcm.toarray()
 #     if flip_type == 1: # phase-flips
 #     print("last detector can be triggered by", pcm[-1,:].sum(), "faults")
-    # circuit.diagram('timeline-svg')   
+#     circuit.diagram('timeline-svg')   
     return pcm, error_explain_dict, residual_error_dict 
 
 from itertools import product, permutations
@@ -377,11 +369,6 @@ a2_permute = [Ax(A2, i) for i in range(N-1)]
 a3_permute = [Ax(A3, i) for i in range(N-1)]
 a4_permute = [Ax(A4, i) for i in range(N-1)]
 
-####################### Settings ######################
-state = '0'
-flip_type = 1  # 0 for X-flip, 1 for Z-flip
-#######################################################
-
 if state == '0':
     a1_pcm, a1_error_explain_dict, a1_residual_error_dict = get_pcm(a1_permute, flip_type)
     a2_pcm, a2_error_explain_dict, a2_residual_error_dict = get_pcm(a2_permute, flip_type)
@@ -397,7 +384,6 @@ pcms = [a1_pcm, a2_pcm, a3_pcm, a4_pcm]
 residual_error_dicts = [a1_residual_error_dict, a2_residual_error_dict, a3_residual_error_dict, a4_residual_error_dict]
 explain_dicts = [a1_error_explain_dict, a2_error_explain_dict, a3_error_explain_dict, a4_error_explain_dict]
 
-residual = [0,1]
 def construct_0001_dict(a):
     a_pcm = pcms[a]
     a_res = residual_error_dicts[a]
@@ -462,6 +448,8 @@ for t in perm_0001:
     all_exp_dicts[t] = explain_dict
     
 for t in perm_0011:
+    if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 2)):
+        continue # separate tests on ancilla (1,2) and ancilla (3,4)
     print(t)
     a, b = np.where(t)[0]
     print(f"construct dict for one fault on A{a+1}, one fault on A{b+1}")
@@ -489,6 +477,8 @@ def is_malignant(s, order):
     return is_malignant
 
 for k, v in sum_2_splits.items():
+    if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 2)):
+        continue # separate tests on ancilla (1,2) and ancilla (3,4)
     print(f"test 2 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
     a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
     a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
@@ -501,6 +491,8 @@ for k, v in sum_2_splits.items():
                 print(f"malignant, at columns {i1} {j1}")
                 
 for k, v in sum_3_splits.items():
+    if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 3)):
+        continue # separate tests on ancilla (1,2) and ancilla (3,4)
     print(f"test 3 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
     a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
     a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
@@ -513,6 +505,8 @@ for k, v in sum_3_splits.items():
                 print(f"malignant, at columns {i1} {j1} {j2}")
                 
 for k, v in sum_4_splits.items():
+    if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 4)):
+        continue # separate tests on ancilla (1,2) and ancilla (3,4)
     print(f"test 4 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
     a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
     a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
@@ -524,7 +518,10 @@ for k, v in sum_4_splits.items():
                 j1, j2 = b_exp[k1]
                 print(f"malignant, at columns {i1} {i2} {j1} {j2}")
 
-def construct_0111_dict(a, b, c):
+def construct_0111_dict(a, b, c, filename):
+    my_file = Path(filename)
+    if my_file.exists():
+        return
     a_pcm, b_pcm, c_pcm = pcms[a], pcms[b], pcms[c]
     a_res, b_res, c_res = residual_error_dicts[a], residual_error_dicts[b], residual_error_dicts[c]
     dict_0111 = {}
@@ -544,9 +541,13 @@ def construct_0111_dict(a, b, c):
                         to_store ^= c_res[k]
                     dict_0111[key] = to_store
 #                     explain_dict[key] = (i,j,k)
-    return dict_0111 #, explain_dict
+    with open(filename, 'wb') as f:
+        pickle.dump(dict_0111, f)   
    
-def construct_0003_dict(a):
+def construct_0003_dict(a, filename):
+    my_file = Path(filename)
+    if my_file.exists():
+        return
     a_pcm = pcms[a]
     a_res = residual_error_dicts[a]
     dict_0003 = {}
@@ -562,9 +563,13 @@ def construct_0003_dict(a):
                         to_store = a_res[i] ^ a_res[j] ^ a_res[k]
                     dict_0003[key] = to_store
 #                     explain_dict[key] = (i,j,k)
-    return dict_0003 #, explain_dict
+    with open(filename, 'wb') as f:
+        pickle.dump(dict_0003, f)
 
-def construct_0012_dict(a, b):
+def construct_0012_dict(a, b, filename):
+    my_file = Path(filename)
+    if my_file.exists():
+        return
     a_pcm, b_pcm = pcms[a], pcms[b]
     a_res, b_res = residual_error_dicts[a], residual_error_dicts[b]
     dict_0012 = {}
@@ -582,66 +587,19 @@ def construct_0012_dict(a, b):
                         to_store ^= (b_res[j] ^ b_res[k])
                     dict_0012[key] = to_store
 #                     explain_dict[key] = (i,j,k)
-    return dict_0012 #, explain_dict
-
-for t in perm_0003:
-    name = ''.join(map(str, t))
-    print(t)
-    filename = f"test_strict_FT/{name}.pkl"
-    my_file = Path(filename)
-    if my_file.exists():
-        continue
-    else:
-        [a] = np.where(t)[0]
-        print(f"construct dict for three fault on A{a+1}")
-        # dict_0003, explain_dict = construct_0003_dict(a)
-        dict_0003 = construct_0003_dict(a)
-        all_res_dicts[t] = dict_0003
-        # all_exp_dicts[t] = explain_dict
-        with open(filename, 'wb') as f:
-            pickle.dump(dict_0003, f)
-    
-for t in perm_0012:
-    print(t)
-    name = ''.join(map(str, t))
-    filename = f"test_strict_FT/{name}.pkl"
-    my_file = Path(filename)
-    if my_file.exists():
-        continue
-    else:
-        a, b = t.index(1), t.index(2)
-        print(f"construct dict for one fault on A{a+1}, two faults on A{b+1}")
-        dict_0012 = construct_0012_dict(a, b)
-        # all_res_dicts[t] = dict_0012
-        with open(filename, 'wb') as f:
-            pickle.dump(dict_0012, f)
-
-            
-for t in perm_0111:
-    print(t)
-    name = ''.join(map(str, t))
-    filename = f"test_strict_FT/{name}.pkl"
-    my_file = Path(filename)
-    if my_file.exists():
-        continue
-    else:
-        [a,b,c] = np.where(t)[0]
-        print(f"construct dict for one fault on A{a+1}, one fault on A{b+1}, one fault on A{c+1}")
-        dict_0111 = construct_0111_dict(a, b, c)
-        # all_res_dicts[t] = dict_0111
-        with open(filename, 'wb') as f:
-            pickle.dump(dict_0111, f)   
+    with open(filename, 'wb') as f:
+        pickle.dump(dict_0012, f)
 
 # check all the stored dict can be correctly loaded
 # for a in perm_0012 | perm_0003 | perm_0111:
 #     print(a)
-#     with open(f"test_strict_FT/{''.join(map(str, a))}.pkl", 'rb') as f:
+#     with open(f"{parent_dir}/{''.join(map(str, a))}.pkl", 'rb') as f:
 #         pickle.load(f)
 
 def test_5_faults(t1, t2):
     a_dict = all_res_dicts[t1]
     temp_cnt = 0
-    with open(f"test_strict_FT/{''.join(map(str, t2))}.pkl", 'rb') as f:
+    with open(f"{parent_dir}/{''.join(map(str, t2))}.pkl", 'rb') as f:
         b_dict = pickle.load(f)
         for k1 in a_dict.keys():
             if k1 in b_dict.keys():
@@ -651,9 +609,9 @@ def test_5_faults(t1, t2):
     print(f"found {temp_cnt} sets violating strict FT")
 
 def test_6_faults(t1, t2):
-    with open(f"test_strict_FT/{''.join(map(str, t1))}.pkl", 'rb') as f:
+    with open(f"{parent_dir}/{''.join(map(str, t1))}.pkl", 'rb') as f:
         a_dict = pickle.load(f)
-    with open(f"test_strict_FT/{''.join(map(str, t2))}.pkl", 'rb') as f:
+    with open(f"{parent_dir}/{''.join(map(str, t2))}.pkl", 'rb') as f:
         b_dict = pickle.load(f)
     temp_cnt = 0
     for k1 in a_dict.keys():
@@ -667,7 +625,47 @@ def test_6_faults(t1, t2):
 
 if __name__ == "__main__":
 
+    for t in perm_0003:
+        if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 3)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
+        print(t)
+        name = ''.join(map(str, t))
+        filename = f"{parent_dir}/{name}.pkl"
+        [a] = np.where(t)[0]
+        print(f"construct dict for three fault on A{a+1}")
+        p = Process(target=construct_0003_dict, args=(a, filename))
+        p.start()
+        p.join()
+        
+    for t in perm_0012:
+        if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 3)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
+        print(t)
+        name = ''.join(map(str, t))
+        filename = f"{parent_dir}/{name}.pkl"
+        a, b = t.index(1), t.index(2)
+        print(f"construct dict for one fault on A{a+1}, two faults on A{b+1}")
+        p = Process(target=construct_0012_dict, args=(a, b, filename))
+        p.start()
+        p.join()
+
+                
+    for t in perm_0111:
+        if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 3)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
+        print(t)
+        name = ''.join(map(str, t))
+        filename = f"{parent_dir}/{name}.pkl"
+        [a,b,c] = np.where(t)[0]
+        print(f"construct dict for one fault on A{a+1}, one fault on A{b+1}, one fault on A{c+1}")
+        p = Process(target=construct_0111_dict, args=(a, b, c, filename))
+        p.start()
+        p.join()
+
+
     for k, v in sum_5_splits.items():
+        if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 5)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
         print(f"test 5 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
         # a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
         p = Process(target=test_5_faults, args=(v[0],v[1]))
@@ -675,6 +673,8 @@ if __name__ == "__main__":
         p.join()
 
     for k, v in sum_6_splits.items():
+        if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 6)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
         print(f"test 6 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
         # a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
         p = Process(target=test_6_faults, args=(v[0],v[1]))

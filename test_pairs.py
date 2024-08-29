@@ -12,6 +12,7 @@ import operator
 import itertools
 import random
 from functools import reduce
+from utils import propagate, form_pauli_string
 
 n = 7 
 N = 2 ** n
@@ -40,38 +41,6 @@ def Eij(i,j):
     A = np.eye(n, dtype=int)
     A[i,j] = 1
     return A
-
-def is_codeword(M):
-    unencode = (M @ E) % 2
-    return np.logical_not(unencode[:, frozen_mask].any(axis=1))
-    
-def propagate(
-    pauli_string: stim.PauliString,
-    circuits: List[stim.Circuit]
-) -> stim.PauliString:
-    for circuit in circuits:
-        pauli_string = pauli_string.after(circuit)
-    return pauli_string
-
-def form_pauli_string(
-    flipped_pauli_product: List[stim.GateTargetWithCoords],
-    num_qubits: int = N,
-) -> stim.PauliString:
-    xs = np.zeros(num_qubits, dtype=np.bool_)
-    zs = np.zeros(num_qubits, dtype=np.bool_)
-    for e in flipped_pauli_product:
-        target_qubit, pauli_type = e.gate_target.value, e.gate_target.pauli_type
-        if target_qubit >= num_qubits:
-            continue
-        if pauli_type == 'X':
-            xs[target_qubit] = 1
-        elif pauli_type == 'Z':
-            zs[target_qubit] = 1
-        elif pauli_type == 'Y':
-            xs[target_qubit] = 1
-            zs[target_qubit] = 1
-    s = stim.PauliString.from_numpy(xs=xs, zs=zs)
-    return s
 
 def dict_to_csc_matrix(elements_dict, shape):
     # Constructs a `scipy.sparse.csc_matrix` check matrix from a dictionary `elements_dict` 
@@ -111,7 +80,7 @@ def dem_to_check_matrices(dem: stim.DetectorErrorModel, circuit, num_detector, t
         # store error representative location
         error_dict[hid] = rep_loc
         # propagate error to the end of the circuit to create an residual fault PCM
-        final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product), tick_circuits[rep_loc.tick_offset+1:])
+        final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, N), tick_circuits[rep_loc.tick_offset+1:])
         final_wt = final_pauli_string.weight
 #         print(rep_loc)
 #         print("final pauli string", final_pauli_string, "weight", final_wt)
