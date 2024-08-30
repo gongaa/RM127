@@ -1,253 +1,37 @@
 import stim
 print(stim.__version__)
 import numpy as np
-import scipy
-from scipy.linalg import kron
-from typing import List
-from pprint import pprint
-# from codes_q import *
 import time
-from scipy.sparse import csc_matrix
 import operator
 import itertools
 import random
 from functools import reduce
-from utils import propagate, form_pauli_string
+from structured_test import get_pcm, get_plus_pcm
 
-n = 7 
-N = 2 ** n
-# wt_thresh = n - (n-1)//3 # for [[127,1,7]]
-wt_thresh = n - (n-1)//2 # for [[127,1,15]]
+n = 7 # keep it the same as in structure_test.py
+N = 2 ** n 
+d = 15
+# also keep d and wt_thresh the same as in structure_test.py
+if d == 7:
+    wt_thresh = n - (n-1)//3 # for [[127,1,7]]
+elif d == 15:
+    wt_thresh = n - (n-1)//2 # for [[127,1,15]]
+else:
+    print("unsupported distance", d)
 
-F = np.array([[1,0],[1,1]])
-E = F
-for i in range(n-1):
-    E = scipy.linalg.kron(E, F)
-
-bin_wt = lambda i: bin(i)[2:].count('1')
-bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
-
-frozen_mask = [bin_wt(i)<wt_thresh for i in range(N)]
-frozen_mask[-1] = True # logical |0>
+print(f"test_pair.py: n={n}, N={N}, d={d}, wt_thresh={wt_thresh}")
 
 int2bin = lambda i: [int(c) for c in bin(i)[2:].rjust(n, '0')]
 bin2int = lambda l: int(''.join(map(str, l)), 2)
-
-def ce(exclude, l=0, u=n): # choose except
-    choices = set(range(l,u)) - set([exclude])
-    return random.choice(list(choices))
 
 def Eij(i,j):
     A = np.eye(n, dtype=int)
     A[i,j] = 1
     return A
 
-def dict_to_csc_matrix(elements_dict, shape):
-    # Constructs a `scipy.sparse.csc_matrix` check matrix from a dictionary `elements_dict` 
-    # giving the indices of nonzero rows in each column.
-    nnz = sum(len(v) for k, v in elements_dict.items())
-    data = np.ones(nnz, dtype=np.uint8)
-    row_ind = np.zeros(nnz, dtype=np.int64)
-    col_ind = np.zeros(nnz, dtype=np.int64)
-    i = 0
-    for col, v in elements_dict.items():
-        for row in v:
-            row_ind[i] = row
-            col_ind[i] = col
-            i += 1
-    return csc_matrix((data, (row_ind, col_ind)), shape=shape)
-
-def dem_to_check_matrices(dem: stim.DetectorErrorModel, circuit, num_detector, tick_circuits, flip_type):
-    # set flip_type to 0 for X-flips and 1 for Z-flips
-    explained_errors: List[stim.ExplainedError] = circuit.explain_detector_error_model_errors(dem_filter=dem, reduce_to_one_representative_error=False)
-    
-    D_ids: Dict[str, int] = {} # detectors operators
-    priors_dict: Dict[int, float] = {} # for each fault
-    error_dict = {} # for where the fault happened
-    residual_error_dict = {}
-
-    def handle_error(prob: float, detectors: List[int], rep_loc) -> None:
-        dets = frozenset(detectors)
-        key = " ".join([f"D{s}" for s in sorted(dets)])
-
-        if key not in D_ids:
-            D_ids[key] = len(D_ids)
-            priors_dict[D_ids[key]] = 0.0
-
-        hid = D_ids[key]
-#         priors_dict[hid] = priors_dict[hid] * (1 - prob) + prob * (1 - priors_dict[hid])
-        priors_dict[hid] += prob
-        # store error representative location
-        error_dict[hid] = rep_loc
-        # propagate error to the end of the circuit to create an residual fault PCM
-        final_pauli_string = propagate(form_pauli_string(rep_loc.flipped_pauli_product, N), tick_circuits[rep_loc.tick_offset+1:])
-        final_wt = final_pauli_string.weight
-#         print(rep_loc)
-#         print("final pauli string", final_pauli_string, "weight", final_wt)
-        residual_error_dict[hid] = final_pauli_string.to_numpy()[flip_type] # for bit flips, use [1] to extract phase flips
-        
-    index = 0
-    for instruction in dem.flattened():
-        if instruction.type == "error":
-            dets: List[int] = []
-            t: stim.DemTarget
-            p = instruction.args_copy()[0]
-            for t in instruction.targets_copy():
-                if t.is_relative_detector_id():
-                    dets.append(t.val)
-
-#             print(explained_errors[index].circuit_error_locations[0]) ####################### location
-            handle_error(p, dets, explained_errors[index].circuit_error_locations[0])
-            index += 1
-        elif instruction.type == "detector":
-#             print("should not have detector, instruction", instruction)
-            pass
-        elif instruction.type == "logical_observable":
-            print("should not have logical observable, instruction", instruction)
-            pass
-        else:
-            raise NotImplementedError()
-        
-    check_matrix = dict_to_csc_matrix({v: [int(s[1:]) for s in k.split(" ") if s.startswith("D")] 
-                                       for k, v in D_ids.items()},
-                                      shape=(num_detector, len(D_ids)))
-    priors = np.zeros(len(D_ids))
-    for i, p in priors_dict.items():
-        priors[i] = p
-
-#     print("number of possible residual error strings", len(residual_error_dict))
-#     print(np.concatenate([*residual_error_dict.values()]))
-    return check_matrix, priors, error_dict, residual_error_dict
-
-def get_pcm(permute, flip_type): # set flip_type to 0 for X-flips, 1 for Z-flips
-    p_CNOT = 0.001
-    circuit = stim.Circuit()
-    tick_circuits = [] # for PauliString.after
-    num_detector = 0
-    # initialization
-    for i in range(N-1):
-        if bin_wt(i) >= wt_thresh:
-            circuit.append("RX", permute[i])
-        else:
-            circuit.append("R", permute[i])
-    circuit.append("R", N-1)
-
-    for r in range(n): # rounds
-        sep = 2 ** r
-        tick_circuit = stim.Circuit()
-        for j in range(0, N, 2*sep):
-            for i in range(sep):
-                if j+i+sep < N-1:
-                    circuit.append("CNOT", [permute[j+i+sep], permute[j+i]])
-                    tick_circuit.append("CNOT", [permute[j+i+sep], permute[j+i]])
-                    circuit.append("DEPOLARIZE2", [permute[j+i+sep], permute[j+i]], p_CNOT)
-
-        circuit.append("TICK")
-        tick_circuits.append(tick_circuit)
-
-    # syndrome detectors
-    for r in range(n):
-        sep = 2 ** r
-        for j in range(0, N, 2*sep):
-            for i in range(sep):
-                circuit.append("CNOT", [j+i+sep, j+i])    
-        circuit.append("TICK")
-
-    for i in range(N-1): 
-        if bin_wt(i) >= wt_thresh:
-            circuit.append("MX", i)
-        else:
-            circuit.append("M", i)
-    circuit.append("M", N-1)
-
-    detector_str = ""
-    if flip_type == 0: # bit-flips
-        for i in range(N): # put detector on the punctured qubit, see if any single fault can trigger it
-            if frozen_mask[i]: 
-                detector_str += f"DETECTOR rec[{-N+i}]\n"
-                num_detector += 1
-    else: # phase-flips
-        for i in range(N): # put detector on the punctured qubit, see if any single fault can trigger it
-            if not frozen_mask[i]: 
-                detector_str += f"DETECTOR rec[{-N+i}]\n"
-                num_detector += 1
-    detector_circuit = stim.Circuit(detector_str)
-    circuit += detector_circuit
-
-    dem: stim.DetectorErrorModel = circuit.detector_error_model()
-    dem_sampler: stim.CompiledDemSampler = dem.compile_sampler()
-    pcm, priors, error_explain_dict, residual_error_dict = dem_to_check_matrices(dem, circuit, num_detector, tick_circuits, flip_type)
-#     print("flip type", "Z" if flip_type else "X", " #detectors:", num_detector, " residual error shape", len(residual_error_dict))
-    pcm = pcm.toarray()
-#     if flip_type == 0: # bit-flips
-#         print("last detector can be triggered by", pcm[-1,:].sum(), "faults")
-    # circuit.diagram('timeline-svg')   
-    return pcm, error_explain_dict, residual_error_dict
-
-
-def get_plus_pcm(permute, flip_type): # set flip_type to 0 for X-flips, 1 for Z-flips
-    p_CNOT = 0.001
-    circuit = stim.Circuit()
-    tick_circuits = [] # for PauliString.after
-    num_detector = 0
-    # |+> initialization, bit-reversed w.r.t |0>
-    for i in range(1,N):
-        if bin_wt(i) >= wt_thresh:
-            circuit.append("RX", permute[N-1-i])
-        else:
-            circuit.append("R", permute[N-1-i])
-    circuit.append("RX", N-1-0)
-
-    for r in range(n): # rounds
-        sep = 2 ** r
-        tick_circuit = stim.Circuit()
-        for j in range(0, N, 2*sep):
-            for i in range(sep):
-                if j+i+sep < N-1:
-                    circuit.append("CNOT", [permute[j+i], permute[j+i+sep]])
-                    tick_circuit.append("CNOT", [permute[j+i], permute[j+i+sep]])
-                    circuit.append("DEPOLARIZE2", [permute[j+i], permute[j+i+sep]], p_CNOT)
-
-        circuit.append("TICK")
-        tick_circuits.append(tick_circuit)
-
-    # syndrome detectors
-    for r in range(n):
-        sep = 2 ** r
-        for j in range(0, N, 2*sep):
-            for i in range(sep):
-                circuit.append("CNOT", [j+i, j+i+sep])    
-        circuit.append("TICK")
-
-    detector_str = ""
-    j = 0
-    for i in range(1,N)[::-1]: 
-        if bin_wt(i) >= wt_thresh:
-            circuit.append("MX", N-1-i)
-            if flip_type == 1: # phase-flips
-                detector_str += f"DETECTOR rec[{-N+j}]\n"
-                num_detector += 1
-        else:
-            circuit.append("M", N-1-i)
-            if flip_type == 0: # bit-flips
-                detector_str += f"DETECTOR rec[{-N+j}]\n"
-                num_detector += 1
-        j += 1
-    circuit.append("MX", N-1-0)
-    detector_str += f"DETECTOR rec[-1]\n"; num_detector += 1 # put detector on the punctured qubit
-
-    detector_circuit = stim.Circuit(detector_str)
-    circuit += detector_circuit
-
-    dem: stim.DetectorErrorModel = circuit.detector_error_model()
-    dem_sampler: stim.CompiledDemSampler = dem.compile_sampler()
-    pcm, priors, error_explain_dict, residual_error_dict = dem_to_check_matrices(dem, circuit, num_detector, tick_circuits, flip_type)
-#     print("flip type", "Z" if flip_type else "X", " #detectors:", num_detector, " residual error shape", len(residual_error_dict))
-    pcm = pcm.toarray()
-#     if flip_type == 1: # phase-flips
-#     print("last detector can be triggered by", pcm[-1,:].sum(), "faults")
-    # circuit.diagram('timeline-svg')   
-    return pcm, error_explain_dict, residual_error_dict 
+def ce(exclude, l=0, u=n): # choose except
+    choices = set(range(l,u)) - set([exclude])
+    return random.choice(list(choices))
 
 def test_faults(A, flip_type, state="0"):
     

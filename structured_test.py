@@ -5,29 +5,31 @@ from typing import List
 import time
 from scipy.sparse import csc_matrix
 import operator
-import itertools
-import random
 from functools import reduce
 from PyDecoder_polar import PyDecoder_polar_SCL
 from utils import propagate, form_pauli_string
-import pickle
+import pickle, os
 from pathlib import Path
+from itertools import product, permutations
 from multiprocessing import Process
 
+####################### Settings ######################
 n = 7
-N = 2 ** n
 d = 15
-if d == 15:
+state = '+'
+flip_type = 1  # 0 for X-flip, 1 for Z-flip
+#######################################################
+N = 2 ** n
+
+if d == 7:
     wt_thresh = n - (n-1)//3 # for [[127,1,7]]
 elif d == 15:
     wt_thresh = n - (n-1)//2 # for [[127,1,15]]
 else:
     print("unsupported distance", d)
 
-####################### Settings ######################
-state = '0'
-flip_type = 0  # 0 for X-flip, 1 for Z-flip
-# d = 15
+print(f"structured_test.py: n={n}, N={N}, d={d}, wt_thresh={wt_thresh}")
+
 if d == 15:
     if state == '0' and flip_type == 1: # for zero state X-flip test fist (separately on A1A2 and A3A4), then Z-flip test (errors from all four ancilla can contribute)
         second_test = True
@@ -43,9 +45,6 @@ if d == 7:
         second_test = False
 
 residual = [0,1] if second_test else [0,2]
-parent_dir = f"test_strict_FT_state{state}_{'Z' if flip_type else 'X'}"
-print("saving dictionaries to directory", parent_dir)
-#######################################################
 
 bin_wt = lambda i: bin(i)[2:].count('1')
 bit_rev = lambda t: int(bin(t)[2:].rjust(n, '0')[::-1], 2)
@@ -276,113 +275,6 @@ def get_plus_pcm(permute, flip_type, verbose=False): # set flip_type to 0 for X-
 #     circuit.diagram('timeline-svg')   
     return pcm, error_explain_dict, residual_error_dict 
 
-from itertools import product, permutations
-
-sum_2_tuples = [t for t in product(range(2), repeat=4) if sum(t) == 2]
-sum_3_tuples = [t for t in product(range(3), repeat=4) if sum(t) == 3]
-sum_4_tuples = [t for t in product(range(4), repeat=4) if sum(t) == 4]
-sum_5_tuples = [t for t in product(range(5), repeat=4) if sum(t) == 5]
-sum_6_tuples = [t for t in product(range(6), repeat=4) if sum(t) == 6]
-
-perm_0001 = set(permutations((0,0,0,1)))
-perm_0002 = set(permutations((0,0,0,2)))
-perm_0011 = set(permutations((0,0,1,1)))
-perm_0003 = set(permutations((0,0,0,3)))
-perm_0012 = set(permutations((0,0,1,2)))
-perm_0111 = set(permutations((0,1,1,1)))
-
-sum_1_options = perm_0001
-sum_2_options = perm_0002 | perm_0011
-sum_3_options = perm_0003 | perm_0012 | perm_0111
-
-def split_tuple(t, op1, op2):
-    for option in op1:
-        remaining = tuple(a-b for a, b in zip(t, option))
-        if remaining in op2:
-            return option, remaining
-    return None
-
-sum_2_splits = {}
-sum_3_splits = {}
-sum_4_splits = {}
-sum_5_splits = {}
-sum_6_splits = {}
-
-for t in sum_2_tuples:
-    split = split_tuple(t, sum_1_options, sum_1_options)
-    if split:
-        sum_2_splits[t] = split
-        
-for k, v in sum_2_splits.items():
-    print(k, v)
-    
-for t in sum_3_tuples:
-    split = split_tuple(t, sum_1_options, sum_2_options)
-    if split:
-        sum_3_splits[t] = split
-        
-print(f"len of sum_3_splits {len(sum_3_splits)}")
-    
-for t in sum_4_tuples:
-    split = split_tuple(t, sum_2_options, sum_2_options)
-    if split:
-        sum_4_splits[t] = split
-        
-print(f"len of sum_4_splits {len(sum_4_splits)}")
-    
-for t in sum_5_tuples:
-    split = split_tuple(t, sum_2_options, sum_3_options)
-    if split:
-        sum_5_splits[t] = split
-        
-print(f"len of sum_5_splits {len(sum_5_splits)}")
-    
-for t in sum_6_tuples:
-    split = split_tuple(t, sum_3_options, sum_3_options)
-    if split:
-        sum_6_splits[t] = split
-        
-print(f"len of sum_6_splits {len(sum_6_splits)}")
-
-if d == 7:
-    PA = [(1,0),(2,1),(3,2),(4,3),(5,4),(0,3),(1,4)]
-    PB = [(2,6),(5,1),(6,0),(0,5),(4,2),(0,3),(1,4)] 
-    PC = [(3,1),(0,2),(2,6),(6,4),(5,0),(6,5),(3,6)]
-    PD = [(5,3),(6,1),(1,2),(2,5),(4,0),(6,5),(3,6)]
-elif d == 15:
-    PA = [(1,2),(6,0),(4,3),(3,6),(0,1),(2,3),(1,6)]
-    PB = [(2,6),(5,1),(6,0),(0,5),(4,2),(0,3),(1,4)] 
-    PC = [(3,1),(0,2),(2,6),(6,4),(5,0),(6,5),(3,6)] 
-    PD = [(5,3),(6,1),(1,2),(2,5),(4,0),(3,4),(4,5)] 
-else:
-    PA = []; PB = []; PC = []; PD = []
-
-list_prod = lambda A : reduce(operator.matmul, [Eij(a[0],a[1]) for a in A], np.eye(n, dtype=int)) % 2
-
-A1 = list_prod(PA[::-1]) % 2
-A2 = list_prod(PB[::-1]) % 2
-A3 = list_prod(PC[::-1]) % 2
-A4 = list_prod(PD[::-1]) % 2
-Ax = lambda A, i: N-1-bin2int(A @ np.array(int2bin(N-1-i)) % 2)
-a1_permute = [Ax(A1, i) for i in range(N-1)]
-a2_permute = [Ax(A2, i) for i in range(N-1)]
-a3_permute = [Ax(A3, i) for i in range(N-1)]
-a4_permute = [Ax(A4, i) for i in range(N-1)]
-
-if state == '0':
-    a1_pcm, a1_error_explain_dict, a1_residual_error_dict = get_pcm(a1_permute, flip_type)
-    a2_pcm, a2_error_explain_dict, a2_residual_error_dict = get_pcm(a2_permute, flip_type)
-    a3_pcm, a3_error_explain_dict, a3_residual_error_dict = get_pcm(a3_permute, flip_type)
-    a4_pcm, a4_error_explain_dict, a4_residual_error_dict = get_pcm(a4_permute, flip_type)
-else:
-    a1_pcm, a1_error_explain_dict, a1_residual_error_dict = get_plus_pcm(a1_permute, flip_type, verbose=False)
-    a2_pcm, a2_error_explain_dict, a2_residual_error_dict = get_plus_pcm(a2_permute, flip_type)
-    a3_pcm, a3_error_explain_dict, a3_residual_error_dict = get_plus_pcm(a3_permute, flip_type)
-    a4_pcm, a4_error_explain_dict, a4_residual_error_dict = get_plus_pcm(a4_permute, flip_type)
-    
-pcms = [a1_pcm, a2_pcm, a3_pcm, a4_pcm]
-residual_error_dicts = [a1_residual_error_dict, a2_residual_error_dict, a3_residual_error_dict, a4_residual_error_dict]
-explain_dicts = [a1_error_explain_dict, a2_error_explain_dict, a3_error_explain_dict, a4_error_explain_dict]
 
 def construct_0001_dict(a):
     a_pcm = pcms[a]
@@ -437,86 +329,6 @@ def construct_0002_dict(a):
                 explain_dict[key] = (i,j)
     return dict_0002, explain_dict
 
-all_res_dicts = {} # key is stabilizer detector, value is residual on output
-all_exp_dicts = {} # to explain the faults
-for t in perm_0001:
-    print(t)
-    [a] = np.where(t)[0]
-    print(f"construct dict for one fault on A{a+1}")
-    dict_0001, explain_dict = construct_0001_dict(a)
-    all_res_dicts[t] = dict_0001
-    all_exp_dicts[t] = explain_dict
-    
-for t in perm_0011:
-    if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 2)):
-        continue # separate tests on ancilla (1,2) and ancilla (3,4)
-    print(t)
-    a, b = np.where(t)[0]
-    print(f"construct dict for one fault on A{a+1}, one fault on A{b+1}")
-    dict_0011, explain_dict = construct_0011_dict(a, b)
-    all_res_dicts[t] = dict_0011
-    all_exp_dicts[t] = explain_dict
-    
-for t in perm_0002:
-    print(t)
-    [a] = np.where(t)[0]
-    print(f"construct dict for two faults on A{a+1}")
-    dict_0002, explain_dict = construct_0002_dict(a)
-    all_res_dicts[t] = dict_0002
-    all_exp_dicts[t] = explain_dict    
-    
-decoder = PyDecoder_polar_SCL(3)
-def is_malignant(s, order):
-    num_flip = decoder.decode(list(np.nonzero(s)[0]))
-    class_bit = decoder.last_info_bit
-    is_malignant = False
-    if num_flip > order or (class_bit==1 and state=='+' and flip_type==1) or\
-                           (class_bit==1 and state=='0' and flip_type==0):
-        is_malignant = True
-    # print(f"original wt: {s.sum()}, up to stabilizer: {num_flip}, is malignant: {is_malignant}")
-    return is_malignant
-
-for k, v in sum_2_splits.items():
-    if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 2)):
-        continue # separate tests on ancilla (1,2) and ancilla (3,4)
-    print(f"test 2 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
-    a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
-    a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
-    for k1 in a_dict.keys():
-        if k1 in b_dict.keys():
-            final_error = a_dict[k1] ^ b_dict[k1]
-            if final_error.sum() >= 2 and is_malignant(final_error, 1): # can achieve suppression, i.e., residual weight < fault order
-                i1 = a_exp[k1]
-                j1 = b_exp[k1]
-                print(f"malignant, at columns {i1} {j1}")
-                
-for k, v in sum_3_splits.items():
-    if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 3)):
-        continue # separate tests on ancilla (1,2) and ancilla (3,4)
-    print(f"test 3 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
-    a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
-    a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
-    for k1 in a_dict.keys():
-        if k1 in b_dict.keys():
-            final_error = a_dict[k1] ^ b_dict[k1]
-            if final_error.sum() >= 3 and is_malignant(final_error, 2): # can achieve suppression
-                i1 = a_exp[k1]
-                j1, j2 = b_exp[k1]
-                print(f"malignant, at columns {i1} {j1} {j2}")
-                
-for k, v in sum_4_splits.items():
-    if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 4)):
-        continue # separate tests on ancilla (1,2) and ancilla (3,4)
-    print(f"test 4 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
-    a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
-    a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
-    for k1 in a_dict.keys():
-        if k1 in b_dict.keys():
-            final_error = a_dict[k1] ^ b_dict[k1]
-            if final_error.sum() > 4 and is_malignant(final_error, 4):
-                i1, i2 = a_exp[k1]
-                j1, j2 = b_exp[k1]
-                print(f"malignant, at columns {i1} {i2} {j1} {j2}")
 
 def construct_0111_dict(a, b, c, filename):
     my_file = Path(filename)
@@ -625,6 +437,212 @@ def test_6_faults(t1, t2):
 
 if __name__ == "__main__":
 
+    sum_2_tuples = [t for t in product(range(2), repeat=4) if sum(t) == 2]
+    sum_3_tuples = [t for t in product(range(3), repeat=4) if sum(t) == 3]
+    sum_4_tuples = [t for t in product(range(4), repeat=4) if sum(t) == 4]
+    sum_5_tuples = [t for t in product(range(5), repeat=4) if sum(t) == 5]
+    sum_6_tuples = [t for t in product(range(6), repeat=4) if sum(t) == 6]
+
+    perm_0001 = set(permutations((0,0,0,1)))
+    perm_0002 = set(permutations((0,0,0,2)))
+    perm_0011 = set(permutations((0,0,1,1)))
+    perm_0003 = set(permutations((0,0,0,3)))
+    perm_0012 = set(permutations((0,0,1,2)))
+    perm_0111 = set(permutations((0,1,1,1)))
+
+    sum_1_options = perm_0001
+    sum_2_options = perm_0002 | perm_0011
+    sum_3_options = perm_0003 | perm_0012 | perm_0111
+
+    def split_tuple(t, op1, op2):
+        for option in op1:
+            remaining = tuple(a-b for a, b in zip(t, option))
+            if remaining in op2:
+                return option, remaining
+        return None
+
+    sum_2_splits = {}
+    sum_3_splits = {}
+    sum_4_splits = {}
+    sum_5_splits = {}
+    sum_6_splits = {}
+
+    for t in sum_2_tuples:
+        split = split_tuple(t, sum_1_options, sum_1_options)
+        if split:
+            sum_2_splits[t] = split
+            
+    for k, v in sum_2_splits.items():
+        print(k, v)
+        
+    for t in sum_3_tuples:
+        split = split_tuple(t, sum_1_options, sum_2_options)
+        if split:
+            sum_3_splits[t] = split
+            
+    print(f"len of sum_3_splits {len(sum_3_splits)}")
+        
+    for t in sum_4_tuples:
+        split = split_tuple(t, sum_2_options, sum_2_options)
+        if split:
+            sum_4_splits[t] = split
+            
+    print(f"len of sum_4_splits {len(sum_4_splits)}")
+        
+    for t in sum_5_tuples:
+        split = split_tuple(t, sum_2_options, sum_3_options)
+        if split:
+            sum_5_splits[t] = split
+            
+    print(f"len of sum_5_splits {len(sum_5_splits)}")
+        
+    for t in sum_6_tuples:
+        split = split_tuple(t, sum_3_options, sum_3_options)
+        if split:
+            sum_6_splits[t] = split
+            
+    print(f"len of sum_6_splits {len(sum_6_splits)}")
+
+
+    if d == 7:
+        PA = [(1,0),(2,1),(3,2),(4,3),(5,4),(0,3),(1,4)]
+        PB = [(2,6),(5,1),(6,0),(0,5),(4,2),(0,3),(1,4)] 
+        PC = [(3,1),(0,2),(2,6),(6,4),(5,0),(6,5),(3,6)]
+        PD = [(5,3),(6,1),(1,2),(2,5),(4,0),(6,5),(3,6)]
+    elif d == 15:
+        PA = [(1,2),(6,0),(4,3),(3,6),(0,1),(2,3),(1,6)]
+        PB = [(2,6),(5,1),(6,0),(0,5),(4,2),(0,3),(1,4)] 
+        PC = [(3,1),(0,2),(2,6),(6,4),(5,0),(6,5),(3,6)] 
+        PD = [(5,3),(6,1),(1,2),(2,5),(4,0),(3,4),(4,5)] 
+    else:
+        PA = []; PB = []; PC = []; PD = []
+
+    list_prod = lambda A : reduce(operator.matmul, [Eij(a[0],a[1]) for a in A], np.eye(n, dtype=int)) % 2
+
+    A1 = list_prod(PA[::-1]) % 2
+    A2 = list_prod(PB[::-1]) % 2
+    A3 = list_prod(PC[::-1]) % 2
+    A4 = list_prod(PD[::-1]) % 2
+    Ax = lambda A, i: N-1-bin2int(A @ np.array(int2bin(N-1-i)) % 2)
+    a1_permute = [Ax(A1, i) for i in range(N-1)]
+    a2_permute = [Ax(A2, i) for i in range(N-1)]
+    a3_permute = [Ax(A3, i) for i in range(N-1)]
+    a4_permute = [Ax(A4, i) for i in range(N-1)]
+
+
+    parent_dir = f"test_strict_FT_state{state}_{'Z' if flip_type else 'X'}"
+    print("saving dictionaries to directory", parent_dir)
+    print(f"second test: {second_test}, residual on: {residual}")
+
+
+    if state == '0':
+        a1_pcm, a1_error_explain_dict, a1_residual_error_dict = get_pcm(a1_permute, flip_type)
+        a2_pcm, a2_error_explain_dict, a2_residual_error_dict = get_pcm(a2_permute, flip_type)
+        a3_pcm, a3_error_explain_dict, a3_residual_error_dict = get_pcm(a3_permute, flip_type)
+        a4_pcm, a4_error_explain_dict, a4_residual_error_dict = get_pcm(a4_permute, flip_type)
+    else:
+        a1_pcm, a1_error_explain_dict, a1_residual_error_dict = get_plus_pcm(a1_permute, flip_type, verbose=False)
+        a2_pcm, a2_error_explain_dict, a2_residual_error_dict = get_plus_pcm(a2_permute, flip_type)
+        a3_pcm, a3_error_explain_dict, a3_residual_error_dict = get_plus_pcm(a3_permute, flip_type)
+        a4_pcm, a4_error_explain_dict, a4_residual_error_dict = get_plus_pcm(a4_permute, flip_type)
+        
+    pcms = [a1_pcm, a2_pcm, a3_pcm, a4_pcm]
+    residual_error_dicts = [a1_residual_error_dict, a2_residual_error_dict, a3_residual_error_dict, a4_residual_error_dict]
+    explain_dicts = [a1_error_explain_dict, a2_error_explain_dict, a3_error_explain_dict, a4_error_explain_dict]
+
+    all_res_dicts = {} # key is stabilizer detector, value is residual on output
+    all_exp_dicts = {} # to explain the faults
+    for t in perm_0001:
+        print(t)
+        [a] = np.where(t)[0]
+        print(f"construct dict for one fault on A{a+1}")
+        dict_0001, explain_dict = construct_0001_dict(a)
+        all_res_dicts[t] = dict_0001
+        all_exp_dicts[t] = explain_dict
+        
+    for t in perm_0011:
+        if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 2)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
+        print(t)
+        a, b = np.where(t)[0]
+        print(f"construct dict for one fault on A{a+1}, one fault on A{b+1}")
+        dict_0011, explain_dict = construct_0011_dict(a, b)
+        all_res_dicts[t] = dict_0011
+        all_exp_dicts[t] = explain_dict
+        
+    for t in perm_0002:
+        print(t)
+        [a] = np.where(t)[0]
+        print(f"construct dict for two faults on A{a+1}")
+        dict_0002, explain_dict = construct_0002_dict(a)
+        all_res_dicts[t] = dict_0002
+        all_exp_dicts[t] = explain_dict    
+        
+    decoder = PyDecoder_polar_SCL(3)
+    def is_malignant(s, order):
+        num_flip = decoder.decode(list(np.nonzero(s)[0]))
+        class_bit = decoder.last_info_bit
+        is_malignant = False
+        if num_flip > order or (class_bit==1 and state=='+' and flip_type==1) or\
+                            (class_bit==1 and state=='0' and flip_type==0):
+            is_malignant = True
+        # print(f"original wt: {s.sum()}, up to stabilizer: {num_flip}, is malignant: {is_malignant}")
+        return is_malignant
+
+    for k, v in sum_2_splits.items():
+        if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 2)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
+        print(f"test 2 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
+        a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
+        a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
+        for k1 in a_dict.keys():
+            if k1 in b_dict.keys():
+                final_error = a_dict[k1] ^ b_dict[k1]
+                if final_error.sum() >= 2 and is_malignant(final_error, 1): # can achieve suppression, i.e., residual weight < fault order
+                    i1 = a_exp[k1]
+                    j1 = b_exp[k1]
+                    print(f"malignant, at columns {i1} {j1}")
+                    
+    for k, v in sum_3_splits.items():
+        if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 3)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
+        print(f"test 3 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
+        a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
+        a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
+        for k1 in a_dict.keys():
+            if k1 in b_dict.keys():
+                final_error = a_dict[k1] ^ b_dict[k1]
+                if final_error.sum() >= 3 and is_malignant(final_error, 2): # can achieve suppression
+                    i1 = a_exp[k1]
+                    j1, j2 = b_exp[k1]
+                    print(f"malignant, at columns {i1} {j1} {j2}")
+                    
+    for k, v in sum_4_splits.items():
+        if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 4)):
+            continue # separate tests on ancilla (1,2) and ancilla (3,4)
+        print(f"test 4 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
+        a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
+        a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
+        for k1 in a_dict.keys():
+            if k1 in b_dict.keys():
+                final_error = a_dict[k1] ^ b_dict[k1]
+                if final_error.sum() > 4 and is_malignant(final_error, 4):
+                    i1, i2 = a_exp[k1]
+                    j1, j2 = b_exp[k1]
+                    print(f"malignant, at columns {i1} {i2} {j1} {j2}")
+
+    # for order five and six faults, take a lot of memory/hard disk/time to run
+    # state0_Z and state+_X take 90G each (saved on disk), runtime ~3h (intel i9-13900K)
+    # state0_X and state+_Z take 24G each (saved on disk), runtime ~1h
+    # peak memory usuage after loading in dictionaries and doing MITM test is ~30G
+    # existing output can be found under strict_FT/
+    # if do not care about those faults, comment the following out
+    if not os.path.exists(parent_dir):
+        try:
+            os.mkdir(parent_dir)
+        except OSError as error:
+            print(error)
+
     for t in perm_0003:
         if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 3)):
             continue # separate tests on ancilla (1,2) and ancilla (3,4)
@@ -667,7 +685,6 @@ if __name__ == "__main__":
         if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 5)):
             continue # separate tests on ancilla (1,2) and ancilla (3,4)
         print(f"test 5 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
-        # a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
         p = Process(target=test_5_faults, args=(v[0],v[1]))
         p.start()
         p.join()
@@ -676,7 +693,6 @@ if __name__ == "__main__":
         if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 6)):
             continue # separate tests on ancilla (1,2) and ancilla (3,4)
         print(f"test 6 faults distributed as {k}, MITM between {v[0]} and {v[1]}")
-        # a_dict, b_dict = all_res_dicts[v[0]], all_res_dicts[v[1]]
         p = Process(target=test_6_faults, args=(v[0],v[1]))
         p.start()
         p.join()
