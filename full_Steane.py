@@ -3,7 +3,7 @@ print(stim.__version__)
 import numpy as np
 import time, sys, argparse
 from PyDecoder_polar import PyDecoder_polar_SCL
-from utils import z_component, x_component, sample_ancilla_error
+from utils import z_component, x_component, sample_ancilla_error, process_ancilla_error
 
 N = 2 ** 7
 factor = 1.0            # p_SPAM / p_CNOT
@@ -26,7 +26,7 @@ def mean_wt(errors):
     # print(f"XY component {x}, YZ component {z}, pure Y component {y}")
 
 # phase error Steane EC block
-def phase_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_correction_error=False, avg_flip=None):
+def phase_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_correction_error=False, avg_flip=None, alert=False):
     global p_CNOT, p_SPAM, p_correction
     if input_errors is None:
         input_errors = [stim.PauliString(N) for _ in range(bs)]
@@ -38,7 +38,8 @@ def phase_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable
     
     coupling_circuit = stim.Circuit()
     if not disable_correction_error: 
-        # for example: first bit-flip then phase-flip EC, 
+        # for example: if pauli-frame tracking is not turned on
+        # or for example: first bit-flip then phase-flip EC, 
         # then correction can be applied when both blocks are done, 
         # sparing the correction error for the second block
         for i in range(N-1): # when applying previous round error correction operator, there is single-qubit noise
@@ -61,18 +62,23 @@ def phase_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable
     if decoder is not None:
         # look at Z component on qubit N ~ 2N-1 and try to correct
         noise = list(map(lambda s: z_component(s[N:]), coupling_errors))
-        # print("before applying phase-flip decoder")
-        # mean_wt(noise)
+        if alert:
+            print("before applying phase-flip decoder")
+            mean_wt(noise)
         if avg_flip is not None:
             avg_flip.append(sum([len(s.pauli_indices('Z')) for s in noise])/bs)
+
+        residual_errors = list(map(lambda s: s[:N] * z_component(s[N:]), coupling_errors))
         error_mask = [False for _ in range(bs)]
         for i in range(len(noise)):
             num_flip = decoder.decode(list(np.nonzero(noise[i])[0]))
             class_bit = decoder.last_info_bit
             if class_bit != 0:
                 error_mask[i] = True
+                if alert:
+                    print("ALERT: before logical gates correction error, apply an extra logical Z", flush=True)
+                    residual_errors[i] *= stim.PauliString("Z"*(N-1)+"I")
                 # print("# phase flip:", num_flip)
-        residual_errors = list(map(lambda s: s[:N] * z_component(s[N:]), coupling_errors))
         # print("after a phase EC block with decoder")
         # mean_wt(residual_errors)
         return residual_errors, error_mask
@@ -82,7 +88,7 @@ def phase_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable
         # mean_wt(residual_errors)
         return residual_errors
 
-def bit_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_correction_error=False, avg_flip=[]):
+def bit_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_correction_error=False, avg_flip=[], alert=False):
     global p_CNOT, p_SPAM, p_correction
     if input_errors is None:
         input_errors = [stim.PauliString(N) for _ in range(bs)]
@@ -114,18 +120,24 @@ def bit_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, disable_c
     if decoder is not None:
         # look at X component on qubit N ~ 2N-1 and try to correct
         noise = list(map(lambda s: x_component(s[N:]), coupling_errors))
-        # print("before applying bit-flip decoder")
-        # mean_wt(noise)
+        if alert:
+            print("before applying bit-flip decoder")
+            mean_wt(noise)
         if avg_flip is not None:
             avg_flip.append(sum([len(s.pauli_indices('X')) for s in noise])/bs)
+
+        residual_errors = list(map(lambda s: s[:N] * x_component(s[N:]), coupling_errors))
         error_mask = [False for _ in range(bs)]
         for i in range(len(noise)):
             num_flip = decoder.decode(list(np.nonzero(noise[i])[0]))
             class_bit = decoder.last_info_bit
             if class_bit != 0:
                 error_mask[i] = True
+                if alert:
+                    print("ALERT: before logical gates correction error, apply an extra logical X", flush=True)
+                    residual_errors[i] *= stim.PauliString("X"*(N-1)+"I")
+
                 # print("# bit flip:", num_flip)
-        residual_errors = list(map(lambda s: s[:N] * x_component(s[N:]), coupling_errors))
         # print("after a bit EC block with decoder")
         # mean_wt(residual_errors)
         return residual_errors, error_mask
@@ -239,6 +251,55 @@ def simulate_code_switching_rectangle(num_batch=1000, index=0):    # batch size 
     end = time.time()
     print(f"Total elasped time {end-start} seconds.")
 
+def simulate_code_switching_rectangle_special_load(num_batch=1000, index=0):    # batch size fixed to 1024
+    global dir_error_rate, factor
+    decoder_r4 = PyDecoder_polar_SCL(4)
+    decoder_r3 = PyDecoder_polar_SCL(3)
+    total_num_errors = 0
+    total_Z_errors = 0; total_X_errors = 0 # want to confirm the phase flip is the dominant term
+    num_shots = num_batch * bs
+    import pickle
+    if factor == 1.0:
+        with open(f"logs_prep_SPAM_equal_CNOT/d15_zero/propagation_dict.pkl", 'rb') as f:
+            d15_zero_prop_dict = pickle.load(f)
+        with open(f"logs_prep_SPAM_equal_CNOT/d15_plus/propagation_dict.pkl", 'rb') as f:
+            d15_plus_prop_dict = pickle.load(f)
+        with open(f"logs_prep_SPAM_equal_CNOT/d7_plus/propagation_dict.pkl", 'rb') as f:
+            d7_plus_prop_dict = pickle.load(f)
+    else:
+        with open(f"logs_prep_SPAM_half_CNOT/d15_zero/propagation_dict.pkl", 'rb') as f:
+            d15_zero_prop_dict = pickle.load(f)
+        with open(f"logs_prep_SPAM_half_CNOT/d15_plus/propagation_dict.pkl", 'rb') as f:
+            d15_plus_prop_dict = pickle.load(f)
+        with open(f"logs_prep_SPAM_half_CNOT/d7_plus/propagation_dict.pkl", 'rb') as f:
+            d7_plus_prop_dict = pickle.load(f)
+
+    start = time.time()
+    a1_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 2*index, dir_error_rate, factor, postprocess=False)
+    a2_d7_plus = sample_ancilla_error(num_shots, 7, 'plus', index, dir_error_rate, factor, postprocess=False)
+    a3_d15_zero = sample_ancilla_error(num_shots, 15, 'zero', 2*index+1, dir_error_rate, factor, postprocess=False)
+    a4_d15_plus = sample_ancilla_error(num_shots, 15, 'plus', index, dir_error_rate, factor, postprocess=False)
+    avg_Z_flip = []
+    avg_X_flip = []
+    for round in range(num_batch):
+        s_start = round * bs
+        s_end = (round+1) * bs
+        residual_errors_b1 = phase_flip_EC_block(ancilla_errors=process_ancilla_error(d15_zero_prop_dict, a1_d15_zero[s_start:s_end]))
+        residual_errors_b2 = bit_flip_EC_block(input_errors=residual_errors_b1, ancilla_errors=process_ancilla_error(d7_plus_prop_dict, a2_d7_plus[s_start:s_end]), disable_correction_error=True)
+        # TODO: double-check logical T gate 
+        residual_errors = logical_T(residual_errors_b2)
+        residual_errors_b3, error_mask_phase = phase_flip_EC_block(input_errors=residual_errors, ancilla_errors=process_ancilla_error(d15_zero_prop_dict, a3_d15_zero[s_start:s_end]), decoder=decoder_r4, disable_correction_error=True, avg_flip=avg_Z_flip)
+        residual_errors_b4, error_mask_bit = bit_flip_EC_block(input_errors=residual_errors_b3, ancilla_errors=process_ancilla_error(d15_plus_prop_dict, a4_d15_plus[s_start:s_end]), decoder=decoder_r3, avg_flip=avg_X_flip)
+        total_num_errors += np.logical_or(error_mask_phase, error_mask_bit).astype(int).sum()
+        total_Z_errors += sum(error_mask_phase)
+        total_X_errors += sum(error_mask_bit)
+        print(f"#errors/#samples: {total_num_errors}/{s_end}")
+        print(f"#phase errors/#samples: {total_Z_errors}/{s_end}, #bit errors/#samples: {total_X_errors}/{s_end}")
+        print(f"error rate: {total_num_errors/(s_end)}")
+        print(f"average Z flips: {sum(avg_Z_flip)/(round+1)}, average X flips: {sum(avg_X_flip)/(round+1)}")
+    end = time.time()
+    print(f"Total elasped time {end-start} seconds.")
+
 
 
 def simulate_single_qubit_Clifford_rectangle(num_batch=150, gate_type='H'): # extended rectangle for logical transversal H or S
@@ -260,8 +321,8 @@ def simulate_single_qubit_Clifford_rectangle(num_batch=150, gate_type='H'): # ex
     for round in range(num_batch):
         s_start = round * bs
         s_end = (round+1) * bs
-        residual_errors_b1 = phase_flip_EC_block(ancilla_errors=a1_d15_zero[s_start:s_end])
-        residual_errors_b2 = bit_flip_EC_block(input_errors=residual_errors_b1, ancilla_errors=a2_d15_plus[s_start:s_end])
+        residual_errors_b1 = phase_flip_EC_block(ancilla_errors=a1_d15_zero[s_start:s_end], decoder=decoder_r3, alert=True)
+        residual_errors_b2 = bit_flip_EC_block(input_errors=residual_errors_b1, ancilla_errors=a2_d15_plus[s_start:s_end], decoder=decoder_r3, alert=True)
         residual_errors = logical_single_qubit_Clifford(residual_errors_b2, gate_type)
         residual_errors_b3, error_mask_phase = phase_flip_EC_block(input_errors=residual_errors, ancilla_errors=a3_d15_zero[s_start:s_end], decoder=decoder_r3, disable_correction_error=True, avg_flip=avg_Z_flip)
         residual_errors_b4, error_mask_bit = bit_flip_EC_block(input_errors=residual_errors_b3, ancilla_errors=a4_d15_plus[s_start:s_end], decoder=decoder_r3, disable_correction_error=True, avg_flip=avg_X_flip)
@@ -289,6 +350,7 @@ def simulate_CNOT_rectangle(num_batch=150, index=0): # extended rectangle for lo
     global dir_error_rate, factor
     decoder_r3 = PyDecoder_polar_SCL(3)
     total_num_errors = 0
+    total_before_logical_errors = 0
     total_num_errors_control = 0; total_num_errors_target = 0
     num_shots = num_batch * bs
     start = time.time()
@@ -305,10 +367,10 @@ def simulate_CNOT_rectangle(num_batch=150, index=0): # extended rectangle for lo
     for round in range(num_batch):
         s_start = round * bs
         s_end = (round+1) * bs
-        residual_errors_b1_control = phase_flip_EC_block(ancilla_errors=ca1_d15_zero[s_start:s_end])
-        residual_errors_b2_control = bit_flip_EC_block(input_errors=residual_errors_b1_control, ancilla_errors=ca2_d15_plus[s_start:s_end], disable_correction_error=True)
-        residual_errors_b1_target = phase_flip_EC_block(ancilla_errors=ta1_d15_zero[s_start:s_end])
-        residual_errors_b2_target = bit_flip_EC_block(input_errors=residual_errors_b1_target, ancilla_errors=ta2_d15_plus[s_start:s_end], disable_correction_error=True)
+        residual_errors_b1_control, error_mask_before_log_phase_control = phase_flip_EC_block(ancilla_errors=ca1_d15_zero[s_start:s_end], decoder=decoder_r3, alert=True)
+        residual_errors_b2_control, error_mask_before_log_bit_control = bit_flip_EC_block(input_errors=residual_errors_b1_control, ancilla_errors=ca2_d15_plus[s_start:s_end], disable_correction_error=True, decoder=decoder_r3, alert=True)
+        residual_errors_b1_target, error_mask_before_log_phase_target = phase_flip_EC_block(ancilla_errors=ta1_d15_zero[s_start:s_end], decoder=decoder_r3, alert=True)
+        residual_errors_b2_target, error_mask_before_log_bit_target = bit_flip_EC_block(input_errors=residual_errors_b1_target, ancilla_errors=ta2_d15_plus[s_start:s_end], disable_correction_error=True, decoder=decoder_r3, alert=True)
         residual_errors_control, residual_errors_target = logical_CNOT(residual_errors_b2_control, residual_errors_b2_target)
         residual_errors_b3_control, error_mask_phase_control = phase_flip_EC_block(input_errors=residual_errors_control, ancilla_errors=ca3_d15_zero[s_start:s_end], decoder=decoder_r3, disable_correction_error=True, avg_flip=avg_c_Z_flip) # preceding block is CNOT, not LEC
         residual_errors_b4_control, error_mask_bit_control = bit_flip_EC_block(input_errors=residual_errors_b3_control, ancilla_errors=ca4_d15_plus[s_start:s_end], decoder=decoder_r3, disable_correction_error=True, avg_flip=avg_c_X_flip)
@@ -317,15 +379,17 @@ def simulate_CNOT_rectangle(num_batch=150, index=0): # extended rectangle for lo
         control_errors = np.logical_or(error_mask_phase_control, error_mask_bit_control)
         target_errors = np.logical_or(error_mask_phase_target, error_mask_bit_target)
         total_num_errors += np.logical_or(control_errors, target_errors).astype(int).sum()
+        total_before_logical_errors += np.logical_or(np.logical_or(error_mask_before_log_phase_control, error_mask_before_log_bit_control), np.logical_or(error_mask_before_log_phase_target, error_mask_before_log_bit_target)).astype(int).sum()
         total_num_errors_control += sum(control_errors)
         total_num_errors_target += sum(target_errors)
-        print(f"#errors/#samples: {total_num_errors}/{s_end}")
-        print(f"#control errors/#samples: {total_num_errors_control}/{s_end}, #phase flip: {sum(error_mask_phase_control)}, #bit flip: {sum(error_mask_bit_control)}")
-        print(f"#target errors/#samples: {total_num_errors_target}/{s_end}, #phase flip: {sum(error_mask_phase_target)}, #bit flip: {sum(error_mask_bit_target)}")
-        print(f"error rate: {total_num_errors/(s_end)}")
-        print(f"control average Z flips: {sum(avg_c_Z_flip)/(round+1)}, X flips: {sum(avg_c_X_flip)/(round+1)}, target average Z flips: {sum(avg_t_Z_flip)/(round+1)}, X flips: {sum(avg_t_X_flip)/(round+1)}")
     end = time.time()
-    print(f"Total elasped time {end-start} seconds.")
+    print(f"#errors before logical/#samples: {total_before_logical_errors}/{s_end}")
+    print(f"#errors/#samples: {total_num_errors}/{s_end}")
+    print(f"#control errors/#samples: {total_num_errors_control}/{s_end}, #phase flip: {sum(error_mask_phase_control)}, #bit flip: {sum(error_mask_bit_control)}")
+    print(f"#target errors/#samples: {total_num_errors_target}/{s_end}, #phase flip: {sum(error_mask_phase_target)}, #bit flip: {sum(error_mask_bit_target)}")
+    print(f"error rate: {total_num_errors/(s_end)}")
+    print(f"control average Z flips: {sum(avg_c_Z_flip)/(round+1)}, X flips: {sum(avg_c_X_flip)/(round+1)}, target average Z flips: {sum(avg_t_Z_flip)/(round+1)}, X flips: {sum(avg_t_X_flip)/(round+1)}")
+    print(f"Total elasped time {end-start} seconds.", flush=True)
 
 
 def simulate_CNOT_rectangle_bit_first(num_batch=200): # extended rectangle for logical transversal CNOT between two blocks
@@ -370,11 +434,11 @@ def simulate_CNOT_rectangle_bit_first(num_batch=200): # extended rectangle for l
         total_num_errors += np.logical_or(control_errors, target_errors).astype(int).sum()
         total_num_errors_control += sum(control_errors)
         total_num_errors_target += sum(target_errors)
-        print(f"#errors/#samples: {total_num_errors}/{s_end}")
-        print(f"#control errors/#samples: {total_num_errors_control}/{s_end}, #phase flip: {sum(error_mask_phase_control)}, #bit flip: {sum(error_mask_bit_control)}")
-        print(f"#target errors/#samples: {total_num_errors_target}/{s_end}, #phase flip: {sum(error_mask_phase_target)}, #bit flip: {sum(error_mask_bit_target)}")
-        print(f"error rate: {total_num_errors/(s_end)}")
     end = time.time()
+    print(f"#errors/#samples: {total_num_errors}/{s_end}")
+    print(f"#control errors/#samples: {total_num_errors_control}/{s_end}, #phase flip: {sum(error_mask_phase_control)}, #bit flip: {sum(error_mask_bit_control)}")
+    print(f"#target errors/#samples: {total_num_errors_target}/{s_end}, #phase flip: {sum(error_mask_phase_target)}, #bit flip: {sum(error_mask_bit_target)}")
+    print(f"error rate: {total_num_errors/(s_end)}")
     print(f"Total elasped time {end-start} seconds.")
 
 
@@ -407,12 +471,14 @@ if __name__ == "__main__":
         simulate_single_qubit_Clifford_rectangle(gate_type=rec_type)
 
     elif rec_type == "CNOT":
-        for s in range(14):
+        # simulate_CNOT_rectangle(num_batch=num_batch, index=0)
+        for s in range(25):
             simulate_CNOT_rectangle(num_batch=num_batch, index=s)
         # simulate_CNOT_rectangle_bit_first()
 
     else: # T gate implemented through code switching
-        simulate_code_switching_rectangle(num_batch=num_batch, index=args.index)
+        # simulate_code_switching_rectangle(num_batch=num_batch, index=args.index)
+        simulate_code_switching_rectangle_special_load(num_batch=num_batch, index=args.index) # for p=0.0002
 
     # for s in range(20):
         # simulate_code_switching_rectangle(num_batch=1, index=index+s)

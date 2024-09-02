@@ -44,12 +44,12 @@ def run_exp(s, p):
     cmd = "python " + filename + f" {s} {p}"
     dest = path + "/" + str(s) + ".log"
     # print(cmd, dest)
-    process = subprocess.Popen(['sbatch', '--mem-per-cpu', '3000', '--time', runtime+':00:00', '--output', dest, '--wrap', cmd])
+    process = subprocess.Popen(['sbatch', '--mem-per-cpu', '4000', '--time', runtime+':00:00', '--output', dest, '--wrap', cmd])
 
 # for p in [0.005, 0.004, 0.003, 0.002, 0.001, 0.0008, 0.0005, 0.0002, 0.0001]:
 # for p in [0.005, 0.004, 0.003, 0.002, 0.001]:
 # for p in [0.001,0.002,0.003]:
-for p in [0.003,0.002]:
+for p in [0.0002]:
 # for p in [0.0005, 0.0008]:
     for s in range(int(n)):
-        run_exp(56+s, p)
+        run_exp(4+s, p)

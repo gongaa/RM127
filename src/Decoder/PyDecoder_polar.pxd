@@ -15,6 +15,7 @@ cdef class PyDecoder_polar_SCL:
     cdef int m, r, N, K, list_size
     cdef int num_flip
     cdef int last_info_bit
+    cdef list correction
     cdef int MEM_ALLOCATED
     cdef vector[bool] frozen_bits
     cdef double* llr_noisy_codeword

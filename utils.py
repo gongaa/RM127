@@ -42,14 +42,15 @@ def x_component(s):
     x, z = s.to_numpy()
     return stim.PauliString.from_numpy(xs=x, zs=np.zeros_like(z, dtype=np.bool_))
 
-def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0):
+def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0, postprocess=True):
     N = 128
-    if factor == 1.0:
-        with open(f"logs_prep_SPAM_equal_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
-            prop_dict = pickle.load(f)
-    else:
-        with open(f"logs_prep_SPAM_half_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
-            prop_dict = pickle.load(f)
+    if postprocess:
+        if factor == 1.0:
+            with open(f"logs_prep_SPAM_equal_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
+                prop_dict = pickle.load(f)
+        else:
+            with open(f"logs_prep_SPAM_half_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
+                prop_dict = pickle.load(f)
 
     parent_dir = "logs_prep_SPAM_equal_CNOT" if factor == 1.0 else "logs_prep_SPAM_half_CNOT"
     parent_dir += f"/d{d}_{state}/{dir_error_rate}"
@@ -58,7 +59,7 @@ def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0)
         fault_dict = pickle.load(f)
 
     with open(f"{parent_dir}/{index}.log", 'r') as f:
-        lines = f.readlines(0)
+        lines = f.readlines()
         target_line = lines[-3 if factor==1.0 else -2].strip() # TODO: change to just -3 before release
         match = re.search(r'Counter\((\{.*\})\)', target_line)
         if match:
@@ -72,9 +73,11 @@ def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0)
             sys.exit("Extract counter failed, abort!")
 
     fault_dict["none"] = num_no_fault
+    print("Number of no fault:", num_no_fault)
 
     with open(f"{parent_dir}/{index}_faults.log", 'r') as f:
-        lines = f.readlines(0)
+        lines = f.readlines()
+        print(f"{index}_faults.log lines length:", len(lines))
         # print(f"number of lines in {index}_faults.log: {len(lines)}")
         for line in lines:
             line = line.strip()[1:-1]
@@ -91,7 +94,24 @@ def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0)
     ancilla = random.sample(list(fault_dict.keys()), num_shots, counts=list(fault_dict.values()))
     end = time.time()
     # print(f"sampling {num_shots} samples from {parent_dir} took {end-start} seconds")
+    if not postprocess: # the caller is responsible for loading the propagation dict and post-process on its own
+        return ancilla
+    
+    ancilla_errors = []
+    for a in ancilla:
+        if a == 'none': # no faults 
+            ancilla_errors.append(stim.PauliString(N))
+        elif isinstance(a, tuple): # multiple fault locations
+            ancilla_errors.append(reduce(stim.PauliString.__mul__, [prop_dict[i] for i in a], stim.PauliString(N)))
+            # residual_error = reduce(stim.PauliString.__mul__, [prop_dict[i] for i in a], stim.PauliString(N))
+            # print(f"#faults: {len(a)}, residual error wt {residual_error.weight}")
+        else: # a single fault
+            ancilla_errors.append(prop_dict[a])
 
+    return ancilla_errors
+
+def process_ancilla_error(prop_dict, ancilla):
+    N = 128
     ancilla_errors = []
     for a in ancilla:
         if a == 'none': # no faults 
@@ -101,5 +121,4 @@ def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0)
         else: # a single fault
             ancilla_errors.append(prop_dict[a])
 
-    return ancilla_errors
-
+    return ancilla_errors   

@@ -46,6 +46,14 @@ cdef class PyDecoder_polar_SCL:
 	def last_info_bit(self): # indicating which class it belongs, C or 1+C, C is the weight even subcode
 		return self.last_info_bit
 
+	@property
+	def correction(self):
+		self.correction = []
+		for i in range(self.N-1):
+			if self.noisy_codeword[i] != self.SCL_denoised_codeword[i]:
+				self.correction.append(i)
+		return self.correction
+
 	cdef int count_weight(self, int i):
 		# Count the number of ones in the binary representation
 		cdef int cnt = 0

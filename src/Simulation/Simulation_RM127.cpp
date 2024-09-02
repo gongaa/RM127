@@ -31,18 +31,6 @@ int simulation_punctured_RM(int r, int num_total, double p, int list_size, int s
     vector<int> encoded_codeword(N, 0);
     int num_flips = 0, SCL_num_flips = 0, SCL_num_err = 0, class_bit = 0;
 
-    noisy_codeword[0] = 1; noisy_codeword[6] = 1; noisy_codeword[24] = 1; noisy_codeword[30] = 1;
-    noisy_codeword[96] = 1; noisy_codeword[102] = 1; noisy_codeword[120] = 1; noisy_codeword[126] = 1;
-    for (int i = 0; i < N-1; i++)
-        llr_noisy_codeword[i] = noisy_codeword[i] ? -log((1-p)/p) : log((1-p)/p); // 0 -> 1.0; 1 -> -1.0
-    llr_noisy_codeword[N-1] = 0; // last bit is punctured
-    SCL_decoder->decode(llr_noisy_codeword.data(), SCL_denoised_codeword.data());
-    SCL_num_flips = count_flip(N-1, noisy_codeword, SCL_denoised_codeword);
-    cerr << "distance to closest codeword " << SCL_num_flips << endl;
-    return 0;
-
-
-
     for (int k = 0; k < num_total; k++) {
         generate_random(K, info_bits.data());
         encoder->encode(info_bits.data(), codeword.data(), 0);
