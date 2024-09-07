@@ -14,7 +14,7 @@ decoder_Z = PyDecoder_polar_SCL(rz)
 state = "zero"
     
 log_files = glob.glob(os.path.join('logs_prep_SPAM_equal_CNOT', f"d{d}_{state}" , "*", '*.log'))
-
+'''
 for log_file in log_files:
     # print(log_file)
     with open(log_file, 'r') as file:
@@ -59,3 +59,75 @@ for log_file in log_files:
                 total_wt = len(set(new_x_list) | set(new_z_list))
                 if total_wt > 2:
                     print(f"ALERT: total weight {total_wt}, num fault {num_fault}, log file {log_file}")
+'''                   
+                    
+# '''
+log_files = [log_file for log_file in log_files if "faults" in log_file]
+import pickle
+with open(f"logs_prep_SPAM_equal_CNOT/d{d}_{state}/propagation_dict.pkl", 'rb') as f:
+    prop_dict = pickle.load(f)
+
+N = 128
+from functools import reduce
+import stim
+for log_file in log_files:
+    with open(log_file, 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip()[1:-1]
+            string_values = line.split()
+            int_values = [int(value) for value in string_values]
+            residual_error = reduce(stim.PauliString.__mul__, [prop_dict[i] for i in int_values], stim.PauliString(N))
+            if residual_error.weight > len(int_values):
+                # print("before degeneracy reduction, strict FT violated in file", log_file, int_values, residual_error.weight)
+                x_component = residual_error.pauli_indices('XY')
+                z_component = residual_error.pauli_indices('YZ')
+                # print(f"X component len: {len(x_component)}, Z component len: {len(z_component)}")
+                num_flip = decoder_X.decode(x_component)
+                class_bit = decoder_X.last_info_bit
+                x_corr = decoder_X.correction
+                if state == 'zero' and class_bit == 1:
+                    print(f"ALERT! X-flip causing logical X errors")
+                num_flip = decoder_Z.decode(z_component)
+                class_bit = decoder_Z.last_info_bit
+                z_corr = decoder_Z.correction
+                if state == 'plus' and class_bit == 1:
+                    print(f"ALERT! Z-flip causing logical Z errors")
+                # print(f"after degeneracy reduction, X wt {len(x_corr)}, Z wt {len(z_corr)}")
+                # print(f"after degeneracy reduction, X corr {x_corr}, Z corr {z_corr}")
+                total_wt = len(set(x_corr) | set(z_corr))
+                if total_wt > len(int_values):
+                    print(f"ALERT: total weight {total_wt}, num fault {len(int_values)}, log file {log_file}, DEM columns {int_values}")
+# '''         
+
+'''
+from collections import Counter
+import sys
+import numpy as np
+cnt_dict = {}
+for p in [0.005,0.004,0.003,0.002,0.0015,0.001]:
+    log_files = glob.glob(os.path.join('logs_prep_SPAM_equal_CNOT', f"d{d}_{state}" , f"p{str(p).split('.')[1]}", '*.log'))
+    log_files = [log_file for log_file in log_files if "faults" not in log_file]
+    total_count = Counter()
+    for log_file in log_files:
+        with open(log_file, 'r') as f:
+            lines = f.readlines()
+            target_line = lines[-3].strip() 
+            match = re.search(r'Counter\((\{.*\})\)', target_line)
+            if match:
+                counter_dict_str = match.group(1) # extract the dictionary part
+                counter_dict = eval(counter_dict_str) # evaluate dict string into dict
+                # print(counter_dict)
+                total_count += Counter(counter_dict)
+            else:
+                print(log_file)
+                sys.exit("Extract counter failed, abort!")
+    cnt_dict[p] = total_count
+
+for p in [0.005,0.004,0.003,0.002,0.0015,0.001]:
+    ratio = []
+    cnt = cnt_dict[p]
+    for i in range(7):
+        ratio.append(float(cnt[i])/cnt.total())
+    print(f"{p}", " ".join([f"{r:.4e}" for r in ratio]))
+'''

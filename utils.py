@@ -5,6 +5,7 @@ import random # random.choice with counts require python>3.11
 import time, re, pickle, sys
 from collections import  Counter
 from functools import reduce
+from PyDecoder_polar import PyDecoder_polar_SCL
 
 def propagate(
     pauli_string: stim.PauliString,
@@ -73,11 +74,10 @@ def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0,
             sys.exit("Extract counter failed, abort!")
 
     fault_dict["none"] = num_no_fault
-    print("Number of no fault:", num_no_fault)
 
     with open(f"{parent_dir}/{index}_faults.log", 'r') as f:
         lines = f.readlines()
-        print(f"{index}_faults.log lines length:", len(lines))
+        print(f"{parent_dir}/{index}_faults.log lines length:", len(lines))
         # print(f"number of lines in {index}_faults.log: {len(lines)}")
         for line in lines:
             line = line.strip()[1:-1]
@@ -86,14 +86,15 @@ def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0,
             if int_values in fault_dict.keys():  
                 fault_dict[int_values] += 1
             else:
-                fault_dict[int_values] = 0
+                fault_dict[int_values] = 1
 
-    # print("length of fault_dict to sample from:", len(fault_dict))
+    print("length of fault_dict to sample from:", len(fault_dict))
+    print("total sample in fault_dict", sum(fault_dict.values()), f"wish to sample {num_shots} samples")
 
     start = time.time()
     ancilla = random.sample(list(fault_dict.keys()), num_shots, counts=list(fault_dict.values()))
     end = time.time()
-    # print(f"sampling {num_shots} samples from {parent_dir} took {end-start} seconds")
+    print(f"sampling {num_shots} samples took {end-start} seconds", flush=True)
     if not postprocess: # the caller is responsible for loading the propagation dict and post-process on its own
         return ancilla
     
@@ -110,7 +111,7 @@ def sample_ancilla_error(num_shots, d, state, index, dir_error_rate, factor=1.0,
 
     return ancilla_errors
 
-def process_ancilla_error(prop_dict, ancilla):
+def process_ancilla_error(prop_dict, ancilla, decoder=None):
     N = 128
     ancilla_errors = []
     for a in ancilla:
@@ -120,5 +121,23 @@ def process_ancilla_error(prop_dict, ancilla):
             ancilla_errors.append(reduce(stim.PauliString.__mul__, [prop_dict[i] for i in a], stim.PauliString(N)))
         else: # a single fault
             ancilla_errors.append(prop_dict[a])
+
+    if decoder:
+        for i in range(len(ancilla_errors)):
+            faults = ancilla[i]
+            residual_error = ancilla_errors[i]
+            x_component = residual_error.pauli_indices('XY')
+            z_component = residual_error.pauli_indices('YZ')
+            if residual_error.weight <= len(faults):
+                print(f"fault {faults}, error (no need to reduce) XY: {x_component}, YZ: {z_component}", flush=True)
+            else:
+                num_flip = decoder.decode(x_component)
+                x_corr = decoder.correction
+                num_flip = decoder.decode(z_component)
+                z_corr = decoder.correction
+                total_wt = len(set(x_corr) | set(z_corr))
+                print(f"fault {faults}, error before reduction XY: {x_component}, YZ: {z_component}, after reduction wt {total_wt}, XY: {x_corr}, YZ: {z_corr}", flush=True)
+        return
+            
 
     return ancilla_errors   
