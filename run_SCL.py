@@ -13,8 +13,8 @@ import sys
 # digits_to_keep = 3
 # seed = input('Enter random seeds: ')
 
-r = 3
-n = 1000000
+r = 4
+n = 10000000
 l = 8
 
 
@@ -35,7 +35,7 @@ def run_exp(s):
     print("Your results will be saved under the directory " + path + "/" + dir)
 
     # for px in np.arange(float(px_min), float(px_max), delta_px):
-    for px in [0.02]:
+    for px in [0.001]:
         cmd = f"./build/apps/program -rz {r} -l {l} -n {n} -seed {s} -px {px}"
         dest = f"{path}/{dir}/p{str(px).split('.')[1]}_s{s}.log"
         # dest = path + "/" + dir + "/p" + str(int(round(px,digits_to_keep)*factor)) + ".log"
@@ -45,5 +45,5 @@ def run_exp(s):
 # for s in seed.split(','):
 #     run_exp(s)
 
-for s in range(10,50):
+for s in range(20):
     run_exp(s)
