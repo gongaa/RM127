@@ -42,18 +42,18 @@ a4_permute = [Ax(A4, i) for i in range(N-1)]
 
 if __name__ == "__main__":
     # Check if an argument has been provided
-    if len(sys.argv) != 3:
-        print("Usage: python script.py <integer> <double>")
+    if len(sys.argv) != 4:
+        print("Usage: python script.py index<int> p_CNOT<float> (p_SPAM/p_CNOT)<float>")
         sys.exit(1)
     try:
         input_value = int(sys.argv[1])
         error_rate = float(sys.argv[2])
+        factor = float(sys.argv[3]) # 1.0 or 0.5
     except ValueError:
         print("The argument must be an integer.")
         sys.exit(1)
         
     p_CNOT = error_rate
-    factor = 1.0 # or 0.5
     p_meas = factor * p_CNOT
     p_prep = p_meas
     num_rounds = 2500

@@ -41,15 +41,14 @@ def run_exp(s, p):
             print(error)   
         print("Your results will be saved under the directory " + path + "/") 
 
-    cmd = "python " + filename + f" {s} {p}"
+    cmd = "python " + filename + f" {s} {p} {factor}"
     dest = path + "/" + str(s) + ".log"
     # print(cmd, dest)
-    process = subprocess.Popen(['sbatch', '--mem-per-cpu', '3000', '--time', runtime+':00:00', '--output', dest, '--wrap', cmd])
+    process = subprocess.Popen(['sbatch', '--mem-per-cpu', '6000', '--time', runtime+':00:00', '--output', dest, '--wrap', cmd])
 
 
-for p in [0.0015]:
+for p in [0.0001]:
     path = parent_dir + suffix + "/p" + str(p).split('.')[1]
     for s in range(int(n)):
         if not os.path.exists(f"{path}/{s}_single_fault.pkl"):
-            print(s)
             run_exp(s, p)

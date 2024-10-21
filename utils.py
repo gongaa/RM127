@@ -56,7 +56,7 @@ def x_component(s):
 class AncillaErrorLoader:
     def __init__(self, decoder_d15, decoder_r2=None, decoder_r4=None):
         self.N = 128
-        self.decoder_d15 = decoder_d15 # expect an instance of PyDecoder_polar_SCL(3)
+        self.decoder_d15 = decoder_d15   # expect an instance of PyDecoder_polar_SCL(3)
         self.decoder_d7_X = decoder_r2   # expect an instance of PyDecoder_polar_SCL(2)
         self.decoder_d7_Z = decoder_r4   # expect an instance of PyDecoder_polar_SCL(4)
         with open(f"logs_prep_SPAM_equal_CNOT/d15_zero/propagation_dict.pkl", 'rb') as f:
@@ -72,9 +72,8 @@ class AncillaErrorLoader:
             fault_dict = pickle.load(f)
 
         with open(f"{parent_dir}/{index}.log", 'r') as f:
-            lines = f.readlines()
-            target_line = lines[-3].strip()
-            match = re.search(r'Counter\((\{.*\})\)', target_line)
+            lines = [line for line in f.readlines() if line.startswith("Counter")]
+            match = re.search(r'Counter\((\{.*\})\)', lines[0].strip())
             if match:
                 counter_dict_str = match.group(1) # extract the dictionary part
                 counter_dict = eval(counter_dict_str) # evaluate dict string into dict
@@ -127,7 +126,7 @@ class AncillaErrorLoader:
             elif isinstance(a, tuple): # multiple fault locations
                 ancilla_errors.append(reduce(stim.PauliString.__mul__, [prop_dict[i] for i in a], stim.PauliString(self.N)))
             else: # a single fault
-                ancilla_errors.append(prop_dict[a]) # single fault only has residual error one, tested beforehand (TODO)
+                ancilla_errors.append(prop_dict[a]) # single fault only has residual error one, tested beforehand
 
         for i in range(len(ancilla_errors)):
             faults = ancilla[i]
@@ -141,12 +140,12 @@ class AncillaErrorLoader:
                 x_class_bit = decoder_X.last_info_bit
                 x_corr = decoder_X.correction
                 if state == 'zero' and x_class_bit == 1:
-                    print(f"ALERT! X-flip causing logical X errors", flush=True)
+                    print(f"ALERT! In loading X-flip causing logical X errors", flush=True)
                 z_num_flip = decoder_Z.decode(z_component)
                 z_class_bit = decoder_Z.last_info_bit
                 z_corr = decoder_Z.correction
                 if state == 'plus' and z_class_bit == 1:
-                    print(f"ALERT! Z-flip causing logical Z errors", flush=True)
+                    print(f"ALERT! In loading Z-flip causing logical Z errors", flush=True)
                 total_wt = len(set(x_corr) | set(z_corr))
                 print(f"fault {faults}, error before reduction XY: {x_component}, YZ: {z_component}, after reduction wt {total_wt}, XY: {x_corr}, YZ: {z_corr}", flush=True)
                 ancilla_errors[i] = lists_to_pauli_string(x_corr, z_corr, self.N)

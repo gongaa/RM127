@@ -137,7 +137,6 @@ def bit_flip_EC_block(ancilla_errors, input_errors=None, decoder=None, enable_co
                 if alert:
                     print(f"ALERT: before logical gates correction error, apply an extra logical X. Before decoder noise={np.nonzero(noise[i])[0]}. After decoder #flip={num_flip}, correction={decoder.correction}", flush=True)
                     residual_errors[i] *= stim.PauliString("X"*(N-1)+"I")
-
                 # print("# bit flip:", num_flip)
         # print("after a bit EC block with decoder")
         # mean_wt(residual_errors)
@@ -242,8 +241,7 @@ def simulate_code_switching_rectangle(num_batch=1000, index=0):    # batch size 
         s_start = round * bs
         s_end = (round+1) * bs
         residual_errors_b1 = phase_flip_EC_block(ancilla_errors=loader.process_ancilla_error(a1_d15_zero[s_start:s_end], 15, 'zero'))
-        residual_errors_b2 = bit_flip_EC_block(input_errors=residual_errors_b1, ancilla_errors=loader.process_ancilla_error(a2_d7_plus[s_start:s_end], 7, 'plus'), enable_correction_error=True) # TODO: disable correction error
-        # TODO: double-check logical T gate 
+        residual_errors_b2 = bit_flip_EC_block(input_errors=residual_errors_b1, ancilla_errors=loader.process_ancilla_error(a2_d7_plus[s_start:s_end], 7, 'plus'))
         residual_errors = logical_T(residual_errors_b2)
         residual_errors_b3, error_mask_phase = phase_flip_EC_block(input_errors=residual_errors, ancilla_errors=loader.process_ancilla_error(a3_d15_zero[s_start:s_end], 15, 'zero'), decoder=decoder_r4, avg_flip=avg_Z_flip)
         residual_errors_b4, error_mask_bit = bit_flip_EC_block(input_errors=residual_errors_b3, ancilla_errors=loader.process_ancilla_error(a4_d15_plus[s_start:s_end], 15, 'plus'), enable_correction_error=True, decoder=decoder_r3, avg_flip=avg_X_flip)
@@ -300,7 +298,7 @@ def simulate_single_qubit_Clifford_rectangle(num_batch=150, gate_type='H', index
     print(f"average Z flips: {sum(avg_Z_flip)/(round+1)}, average X flips: {sum(avg_X_flip)/(round+1)}")
     print(f"Total elasped time {end-start} seconds.")
 
-def simulate_CNOT_rectangle_special_load(num_batch=150, index=0): # extended rectangle for logical transversal CNOT between two blocks
+def simulate_CNOT_rectangle(num_batch=150, index=0): # extended rectangle for logical transversal CNOT between two blocks
     # correct phase-flip first, then bit-flip
     # target bit-flip > control phase-flip. IX > ZI
     ''' -------X--------------.------corr----.----------X--------------.-------
@@ -388,7 +386,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_batch", type=int, default=100, help="number of batch")
     parser.add_argument("--p_CNOT", type=float, help="physical error rate of CNOT")
     parser.add_argument("-t", "--rec_type", choices=["CNOT", "H", "S", "T"], help="type of the exRec, choose between [CNOT, H, S, T]")
-    parser.add_argument("-pft", "--pauli_frame_tracking", choices=[True, False], default=False, help="whether turn on Pauli Frame Tracking for Clifford gates, default to True")
     args = parser.parse_args()
 
     num_batch = args.num_batch
@@ -401,18 +398,17 @@ if __name__ == "__main__":
     p_single = factor_single * p_CNOT # single qubit gate, H, S, T, transversal on all qubits
     p_correction = factor_correction * p_CNOT # single qubit addressing, arbitrary Pauli string
     rec_type = args.rec_type
-    pft = args.pauli_frame_tracking
-    print(f"p_CNOT={p_CNOT}, p_SPAM={p_SPAM}, p_single={p_single}, p_correction={p_correction}, exRec type={rec_type}, Pauli Frame Tracking={pft}, index={args.index}")
+    print(f"p_CNOT={p_CNOT}, p_SPAM={p_SPAM}, p_single={p_single}, p_correction={p_correction}, exRec type={rec_type}, index={args.index}")
     dir_error_rate = "p" + str(p_CNOT).split('.')[1]
     if rec_type in ["H", "S"]:
-        print(f"running {rec_type} exRec")
+        print(f"running {rec_type} exRec, index", args.index)
         simulate_single_qubit_Clifford_rectangle(num_batch=num_batch, index=args.index, gate_type=rec_type)
 
     elif rec_type == "CNOT":
         print("running CNOT exRec, index", args.index)
-        simulate_CNOT_rectangle_special_load(num_batch=num_batch, index=args.index)
+        simulate_CNOT_rectangle(num_batch=num_batch, index=args.index)
 
     else: # T gate implemented through code switching
+        print("running code switching exRec, index", args.index)
         simulate_code_switching_rectangle(num_batch=num_batch, index=args.index)
-        print("running code switching exRec implemented with special load")
 

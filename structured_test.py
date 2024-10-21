@@ -3,6 +3,7 @@ print(stim.__version__)
 import numpy as np
 from typing import List
 import time
+import itertools
 from scipy.sparse import csc_matrix
 import operator
 from functools import reduce
@@ -15,8 +16,8 @@ from multiprocessing import Process
 
 ####################### Settings ######################
 n = 7
-d = 15
-state = '+'
+d = 15 
+state = '0'
 flip_type = 1  # 0 for X-flip, 1 for Z-flip
 #######################################################
 N = 2 ** n
@@ -302,14 +303,16 @@ def construct_0011_dict(a, b):
         for j in range(b_pcm.shape[1]):
             xor = a_pcm[:,i] ^ b_pcm[:,j]
             key = int(''.join(xor.astype('str')), 2)
+            to_store = np.zeros(N, dtype=np.bool_)
+            if a in residual:
+                to_store ^= a_res[i]
+            if b in residual:
+                to_store ^= b_res[j]
             if key not in dict_0011.keys():
-                to_store = np.zeros(N, dtype=np.bool_)
-                if a in residual:
-                    to_store ^= a_res[i]
-                if b in residual:
-                    to_store ^= b_res[j]
-                dict_0011[key] = to_store
+                dict_0011[key] = [to_store]
                 explain_dict[key] = (i,j)
+            else:
+                dict_0011[key].append(to_store)
     return dict_0011, explain_dict
                 
 def construct_0002_dict(a):
@@ -321,12 +324,14 @@ def construct_0002_dict(a):
         for j in range(i+1, a_pcm.shape[1]):
             xor = a_pcm[:,i] ^ a_pcm[:,j]
             key = int(''.join(xor.astype('str')), 2)
+            to_store = np.zeros(N, dtype=np.bool_)
+            if a in residual:
+                to_store = a_res[i] ^ a_res[j]
             if key not in dict_0002.keys():
-                to_store = np.zeros(N, dtype=np.bool_)
-                if a in residual:
-                    to_store = a_res[i] ^ a_res[j]
-                dict_0002[key] = to_store
+                dict_0002[key] = [to_store]
                 explain_dict[key] = (i,j)
+            else:
+                dict_0002[key].append(to_store)
     return dict_0002, explain_dict
 
 
@@ -343,16 +348,18 @@ def construct_0111_dict(a, b, c, filename):
             for k in range(c_pcm.shape[1]):
                 xor = a_pcm[:,i] ^ b_pcm[:,j] ^ c_pcm[:,k]
                 key = int(''.join(xor.astype('str')), 2)
+                to_store = np.zeros(N, dtype=np.bool_)
+                if a in residual:
+                    to_store ^= a_res[i]
+                if b in residual:
+                    to_store ^= b_res[j]
+                if c in residual:
+                    to_store ^= c_res[k]
                 if key not in dict_0111.keys():
-                    to_store = np.zeros(N, dtype=np.bool_)
-                    if a in residual:
-                        to_store ^= a_res[i]
-                    if b in residual:
-                        to_store ^= b_res[j]
-                    if c in residual:
-                        to_store ^= c_res[k]
-                    dict_0111[key] = to_store
+                    dict_0111[key] = [to_store]
 #                     explain_dict[key] = (i,j,k)
+                else:
+                    dict_0111[key].append(to_store)
     with open(filename, 'wb') as f:
         pickle.dump(dict_0111, f)   
    
@@ -369,12 +376,14 @@ def construct_0003_dict(a, filename):
             for k in range(j+1, a_pcm.shape[1]):
                 xor = a_pcm[:,i] ^ a_pcm[:,j] ^ a_pcm[:,k]
                 key = int(''.join(xor.astype('str')), 2)
+                to_store = np.zeros(N, dtype=np.bool_)
+                if a in residual:
+                    to_store = a_res[i] ^ a_res[j] ^ a_res[k]
                 if key not in dict_0003.keys():
-                    to_store = np.zeros(N, dtype=np.bool_)
-                    if a in residual:
-                        to_store = a_res[i] ^ a_res[j] ^ a_res[k]
-                    dict_0003[key] = to_store
+                    dict_0003[key] = [to_store]
 #                     explain_dict[key] = (i,j,k)
+                else:
+                    dict_0003[key].append(to_store)
     with open(filename, 'wb') as f:
         pickle.dump(dict_0003, f)
 
@@ -391,14 +400,16 @@ def construct_0012_dict(a, b, filename):
             for k in range(j+1, b_pcm.shape[1]):
                 xor = a_pcm[:,i] ^ b_pcm[:,j] ^ b_pcm[:,k]
                 key = int(''.join(xor.astype('str')), 2)
+                to_store = np.zeros(N, dtype=np.bool_)
+                if a in residual:
+                    to_store ^= a_res[i]
+                if b in residual:
+                    to_store ^= (b_res[j] ^ b_res[k])
                 if key not in dict_0012.keys():
-                    to_store = np.zeros(N, dtype=np.bool_)
-                    if a in residual:
-                        to_store ^= a_res[i]
-                    if b in residual:
-                        to_store ^= (b_res[j] ^ b_res[k])
-                    dict_0012[key] = to_store
+                    dict_0012[key] = [to_store]
 #                     explain_dict[key] = (i,j,k)
+                else:
+                    dict_0012[key].append(to_store)
     with open(filename, 'wb') as f:
         pickle.dump(dict_0012, f)
 
@@ -415,9 +426,11 @@ def test_5_faults(t1, t2):
         b_dict = pickle.load(f)
         for k1 in a_dict.keys():
             if k1 in b_dict.keys():
-                final_error = a_dict[k1] ^ b_dict[k1]
-                if final_error.sum() > 5 and is_malignant(final_error, 5):
-                    temp_cnt += 1
+                v1, v2 = a_dict[k1], b_dict[k1]
+                for (v1_, v2_) in itertools.product(v1, v2):
+                    final_error = v1_ ^ v2_
+                    if final_error.sum() > 5 and is_malignant(final_error, 5):
+                        temp_cnt += 1
     print(f"found {temp_cnt} sets violating strict FT")
 
 def test_6_faults(t1, t2):
@@ -428,15 +441,17 @@ def test_6_faults(t1, t2):
     temp_cnt = 0
     for k1 in a_dict.keys():
         if k1 in b_dict.keys():
-            final_error = a_dict[k1] ^ b_dict[k1]
-            if final_error.sum() > 6 and is_malignant(final_error, 6):
-                temp_cnt += 1
+            v1, v2 = a_dict[k1], b_dict[k1]
+            for (v1_, v2_) in itertools.product(v1, v2):
+                final_error = v1_ ^ v2_
+                if final_error.sum() > 6 and is_malignant(final_error, 6):
+                    temp_cnt += 1
     print(f"found {temp_cnt} sets violating strict FT")
 
 
 
 if __name__ == "__main__":
-
+    start = time.time()
     sum_2_tuples = [t for t in product(range(2), repeat=4) if sum(t) == 2]
     sum_3_tuples = [t for t in product(range(3), repeat=4) if sum(t) == 3]
     sum_4_tuples = [t for t in product(range(4), repeat=4) if sum(t) == 4]
@@ -549,7 +564,21 @@ if __name__ == "__main__":
     pcms = [a1_pcm, a2_pcm, a3_pcm, a4_pcm]
     residual_error_dicts = [a1_residual_error_dict, a2_residual_error_dict, a3_residual_error_dict, a4_residual_error_dict]
     explain_dicts = [a1_error_explain_dict, a2_error_explain_dict, a3_error_explain_dict, a4_error_explain_dict]
-
+    '''
+    # print information about the only malignant order-4 fault (d=15, state |0>, Z-flip)
+    # column 232 of patch 2:
+    print(a2_error_explain_dict[232]) # Z3*Z54 after 1 TICKs
+    print(np.where(a2_residual_error_dict[232])[0]) # residual error at [2,3,54,55,74,75,126]
+    # column 116 of patch 4:
+    print(a4_error_explain_dict[116]) # Z3*Z2 after 1 TICKs
+    print(np.where(a4_residual_error_dict[116])[0]) # residual error at [2,3,50,51,78,79,126]
+    # column 223 of patch 1:
+    print(a1_error_explain_dict[223]) # Z102*Z98 after 3 TICKs
+    print(np.where(a1_residual_error_dict[223])[0]) # residual error at [2,6,27,31,98,102,123]
+    # column 226 of patch 1:
+    print(a1_error_explain_dict[226]) # Z26*Z30 after 3 TICKs
+    print(np.where(a1_residual_error_dict[226])[0]) # residual error at [2,6,26,30,99,103,123]
+    '''
     all_res_dicts = {} # key is stabilizer detector, value is residual on output
     all_exp_dicts = {} # to explain the faults
     for t in perm_0001:
@@ -577,8 +606,11 @@ if __name__ == "__main__":
         dict_0002, explain_dict = construct_0002_dict(a)
         all_res_dicts[t] = dict_0002
         all_exp_dicts[t] = explain_dict    
+    
+    print(f"finish constructing dictionaries for order-two faults, elapsed time: {time.time() - start} seconds")
+    start = time.time()
         
-    decoder = PyDecoder_polar_SCL(3)
+    decoder = PyDecoder_polar_SCL(3) # change order to 2 for d=7 X-flip, 4 for d=7 Z-flip
     def is_malignant(s, order):
         num_flip = decoder.decode(list(np.nonzero(s)[0]))
         class_bit = decoder.last_info_bit
@@ -611,11 +643,15 @@ if __name__ == "__main__":
         a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
         for k1 in a_dict.keys():
             if k1 in b_dict.keys():
-                final_error = a_dict[k1] ^ b_dict[k1]
-                if final_error.sum() >= 3 and is_malignant(final_error, 2): # can achieve suppression
-                    i1 = a_exp[k1]
-                    j1, j2 = b_exp[k1]
-                    print(f"malignant, at columns {i1} {j1} {j2}")
+                v1, v2 = a_dict[k1], b_dict[k1]
+                if not isinstance(v1, list): v1 = [v1]
+                if not isinstance(v2, list): v2 = [v2]
+                for (v1_, v2_) in itertools.product(v1, v2):
+                    final_error = v1_ ^ v2_
+                    if final_error.sum() >= 3 and is_malignant(final_error, 2):
+                        i1 = a_exp[k1]
+                        j1, j2 = b_exp[k1]
+                        print(f"malignant, at columns {i1} {j1} {j2}")
                     
     for k, v in sum_4_splits.items():
         if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 4)):
@@ -625,11 +661,19 @@ if __name__ == "__main__":
         a_exp, b_exp = all_exp_dicts[v[0]], all_exp_dicts[v[1]]
         for k1 in a_dict.keys():
             if k1 in b_dict.keys():
-                final_error = a_dict[k1] ^ b_dict[k1]
-                if final_error.sum() > 4 and is_malignant(final_error, 4):
-                    i1, i2 = a_exp[k1]
-                    j1, j2 = b_exp[k1]
-                    print(f"malignant, at columns {i1} {i2} {j1} {j2}")
+                v1, v2 = a_dict[k1], b_dict[k1]
+                for (v1_, v2_) in itertools.product(v1, v2):
+                    final_error = v1_ ^ v2_
+                    if final_error.sum() > 4 and is_malignant(final_error, 4): 
+                        i1, i2 = a_exp[k1]
+                        j1, j2 = b_exp[k1]
+                        print(f"malignant, at columns {i1} {i2} {j1} {j2}")
+    # the only malignant order-4 fault found is the following
+    # test 4 faults distributed as (2, 1, 0, 1), MITM between (0, 1, 0, 1) and (2, 0, 0, 0)
+    # malignant, at columns 232 116 223 226
+
+    print(f"finish testing <= 4 faults, elapsed time: {time.time() - start} seconds")
+    start = time.time()
 
     # for order five and six faults, take a lot of memory/hard disk/time to run
     # state0_Z and state+_X take 90G each (saved on disk), runtime ~3h (intel i9-13900K)
@@ -655,6 +699,9 @@ if __name__ == "__main__":
         p.start()
         p.join()
         
+    print(f"finish constructing 0003 dictionaries, elapsed time: {time.time() - start} seconds")
+    start = time.time()
+
     for t in perm_0012:
         if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 3)):
             continue # separate tests on ancilla (1,2) and ancilla (3,4)
@@ -667,6 +714,8 @@ if __name__ == "__main__":
         p.start()
         p.join()
 
+    print(f"finish constructing 0012 dictionaries, elapsed time: {time.time() - start} seconds")
+    start = time.time()
                 
     for t in perm_0111:
         if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 3)):
@@ -680,6 +729,8 @@ if __name__ == "__main__":
         p.start()
         p.join()
 
+    print(f"finish constructing 0111 dictionaries, elapsed time: {time.time() - start} seconds")
+    start = time.time()
 
     for k, v in sum_5_splits.items():
         if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 5)):
@@ -689,6 +740,9 @@ if __name__ == "__main__":
         p.start()
         p.join()
 
+    print(f"finish testing order-five faults, elapsed time: {time.time() - start} seconds")
+    start = time.time()
+
     for k, v in sum_6_splits.items():
         if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 6)):
             continue # separate tests on ancilla (1,2) and ancilla (3,4)
@@ -696,3 +750,6 @@ if __name__ == "__main__":
         p = Process(target=test_6_faults, args=(v[0],v[1]))
         p.start()
         p.join()
+
+    print(f"finish testing order-six faults, elapsed time: {time.time() - start} seconds")
+    start = time.time()
