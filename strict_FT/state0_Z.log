@@ -1,3 +1,134 @@
+structured_test.py: n=7, N=128, d=15, wt_thresh=4
+(0, 0, 1, 1) ((0, 0, 0, 1), (0, 0, 1, 0))
+(0, 1, 0, 1) ((0, 0, 0, 1), (0, 1, 0, 0))
+(0, 1, 1, 0) ((0, 1, 0, 0), (0, 0, 1, 0))
+(1, 0, 0, 1) ((0, 0, 0, 1), (1, 0, 0, 0))
+(1, 0, 1, 0) ((0, 0, 1, 0), (1, 0, 0, 0))
+(1, 1, 0, 0) ((0, 1, 0, 0), (1, 0, 0, 0))
+len of sum_3_splits 16
+len of sum_4_splits 31
+len of sum_5_splits 52
+len of sum_6_splits 80
+saving dictionaries to directory test_strict_FT_state0_Z
+second test: True, residual on: [0, 1]
+(0, 0, 0, 1)
+construct dict for one fault on A4
+(0, 1, 0, 0)
+construct dict for one fault on A2
+(0, 0, 1, 0)
+construct dict for one fault on A3
+(1, 0, 0, 0)
+construct dict for one fault on A1
+(0, 1, 0, 1)
+construct dict for one fault on A2, one fault on A4
+(1, 1, 0, 0)
+construct dict for one fault on A1, one fault on A2
+(0, 1, 1, 0)
+construct dict for one fault on A2, one fault on A3
+(1, 0, 1, 0)
+construct dict for one fault on A1, one fault on A3
+(1, 0, 0, 1)
+construct dict for one fault on A1, one fault on A4
+(0, 0, 1, 1)
+construct dict for one fault on A3, one fault on A4
+(0, 0, 0, 2)
+construct dict for two faults on A4
+(0, 0, 2, 0)
+construct dict for two faults on A3
+(0, 2, 0, 0)
+construct dict for two faults on A2
+(2, 0, 0, 0)
+construct dict for two faults on A1
+finish constructing dictionaries for order-two faults, elapsed time: 14.183854818344116 seconds
+test 2 faults distributed as (0, 0, 1, 1), MITM between (0, 0, 0, 1) and (0, 0, 1, 0)
+test 2 faults distributed as (0, 1, 0, 1), MITM between (0, 0, 0, 1) and (0, 1, 0, 0)
+test 2 faults distributed as (0, 1, 1, 0), MITM between (0, 1, 0, 0) and (0, 0, 1, 0)
+test 2 faults distributed as (1, 0, 0, 1), MITM between (0, 0, 0, 1) and (1, 0, 0, 0)
+test 2 faults distributed as (1, 0, 1, 0), MITM between (0, 0, 1, 0) and (1, 0, 0, 0)
+test 2 faults distributed as (1, 1, 0, 0), MITM between (0, 1, 0, 0) and (1, 0, 0, 0)
+test 3 faults distributed as (0, 0, 1, 2), MITM between (0, 0, 0, 1) and (0, 0, 1, 1)
+test 3 faults distributed as (0, 0, 2, 1), MITM between (0, 0, 0, 1) and (0, 0, 2, 0)
+test 3 faults distributed as (0, 1, 0, 2), MITM between (0, 0, 0, 1) and (0, 1, 0, 1)
+test 3 faults distributed as (0, 1, 1, 1), MITM between (0, 0, 0, 1) and (0, 1, 1, 0)
+test 3 faults distributed as (0, 1, 2, 0), MITM between (0, 1, 0, 0) and (0, 0, 2, 0)
+test 3 faults distributed as (0, 2, 0, 1), MITM between (0, 0, 0, 1) and (0, 2, 0, 0)
+test 3 faults distributed as (0, 2, 1, 0), MITM between (0, 1, 0, 0) and (0, 1, 1, 0)
+test 3 faults distributed as (1, 0, 0, 2), MITM between (0, 0, 0, 1) and (1, 0, 0, 1)
+test 3 faults distributed as (1, 0, 1, 1), MITM between (0, 0, 0, 1) and (1, 0, 1, 0)
+test 3 faults distributed as (1, 0, 2, 0), MITM between (0, 0, 1, 0) and (1, 0, 1, 0)
+test 3 faults distributed as (1, 1, 0, 1), MITM between (0, 0, 0, 1) and (1, 1, 0, 0)
+test 3 faults distributed as (1, 1, 1, 0), MITM between (0, 1, 0, 0) and (1, 0, 1, 0)
+test 3 faults distributed as (1, 2, 0, 0), MITM between (0, 1, 0, 0) and (1, 1, 0, 0)
+test 3 faults distributed as (2, 0, 0, 1), MITM between (0, 0, 0, 1) and (2, 0, 0, 0)
+test 3 faults distributed as (2, 0, 1, 0), MITM between (0, 0, 1, 0) and (2, 0, 0, 0)
+test 3 faults distributed as (2, 1, 0, 0), MITM between (0, 1, 0, 0) and (2, 0, 0, 0)
+test 4 faults distributed as (0, 0, 1, 3), MITM between (0, 0, 0, 2) and (0, 0, 1, 1)
+test 4 faults distributed as (0, 0, 2, 2), MITM between (0, 0, 2, 0) and (0, 0, 0, 2)
+test 4 faults distributed as (0, 0, 3, 1), MITM between (0, 0, 2, 0) and (0, 0, 1, 1)
+test 4 faults distributed as (0, 1, 0, 3), MITM between (0, 1, 0, 1) and (0, 0, 0, 2)
+test 4 faults distributed as (0, 1, 1, 2), MITM between (0, 1, 0, 1) and (0, 0, 1, 1)
+test 4 faults distributed as (0, 1, 2, 1), MITM between (0, 1, 0, 1) and (0, 0, 2, 0)
+test 4 faults distributed as (0, 1, 3, 0), MITM between (0, 1, 1, 0) and (0, 0, 2, 0)
+test 4 faults distributed as (0, 2, 0, 2), MITM between (0, 1, 0, 1) and (0, 1, 0, 1)
+test 4 faults distributed as (0, 2, 1, 1), MITM between (0, 1, 0, 1) and (0, 1, 1, 0)
+test 4 faults distributed as (0, 2, 2, 0), MITM between (0, 1, 1, 0) and (0, 1, 1, 0)
+test 4 faults distributed as (0, 3, 0, 1), MITM between (0, 1, 0, 1) and (0, 2, 0, 0)
+test 4 faults distributed as (0, 3, 1, 0), MITM between (0, 1, 1, 0) and (0, 2, 0, 0)
+test 4 faults distributed as (1, 0, 0, 3), MITM between (1, 0, 0, 1) and (0, 0, 0, 2)
+test 4 faults distributed as (1, 0, 1, 2), MITM between (1, 0, 1, 0) and (0, 0, 0, 2)
+test 4 faults distributed as (1, 0, 2, 1), MITM between (1, 0, 1, 0) and (0, 0, 1, 1)
+test 4 faults distributed as (1, 0, 3, 0), MITM between (1, 0, 1, 0) and (0, 0, 2, 0)
+test 4 faults distributed as (1, 1, 0, 2), MITM between (0, 1, 0, 1) and (1, 0, 0, 1)
+test 4 faults distributed as (1, 1, 1, 1), MITM between (0, 1, 0, 1) and (1, 0, 1, 0)
+test 4 faults distributed as (1, 1, 2, 0), MITM between (1, 1, 0, 0) and (0, 0, 2, 0)
+test 4 faults distributed as (1, 2, 0, 1), MITM between (0, 1, 0, 1) and (1, 1, 0, 0)
+test 4 faults distributed as (1, 2, 1, 0), MITM between (1, 1, 0, 0) and (0, 1, 1, 0)
+test 4 faults distributed as (1, 3, 0, 0), MITM between (1, 1, 0, 0) and (0, 2, 0, 0)
+test 4 faults distributed as (2, 0, 0, 2), MITM between (2, 0, 0, 0) and (0, 0, 0, 2)
+test 4 faults distributed as (2, 0, 1, 1), MITM between (2, 0, 0, 0) and (0, 0, 1, 1)
+test 4 faults distributed as (2, 0, 2, 0), MITM between (2, 0, 0, 0) and (0, 0, 2, 0)
+test 4 faults distributed as (2, 1, 0, 1), MITM between (0, 1, 0, 1) and (2, 0, 0, 0)
+malignant, at columns 232 116 223 226
+test 4 faults distributed as (2, 1, 1, 0), MITM between (1, 1, 0, 0) and (1, 0, 1, 0)
+test 4 faults distributed as (2, 2, 0, 0), MITM between (1, 1, 0, 0) and (1, 1, 0, 0)
+test 4 faults distributed as (3, 0, 0, 1), MITM between (2, 0, 0, 0) and (1, 0, 0, 1)
+test 4 faults distributed as (3, 0, 1, 0), MITM between (2, 0, 0, 0) and (1, 0, 1, 0)
+test 4 faults distributed as (3, 1, 0, 0), MITM between (1, 1, 0, 0) and (2, 0, 0, 0)
+finish testing <= 4 faults, elapsed time: 2.7496118545532227 seconds
+(0, 0, 0, 3)
+construct dict for three fault on A4
+(3, 0, 0, 0)
+construct dict for three fault on A1
+(0, 3, 0, 0)
+construct dict for three fault on A2
+(0, 0, 3, 0)
+construct dict for three fault on A3
+finish constructing 0003 dictionaries, elapsed time: 583.3323392868042 seconds
+(0, 2, 0, 1)
+construct dict for one fault on A4, two faults on A2
+(0, 0, 2, 1)
+construct dict for one fault on A4, two faults on A3
+(1, 0, 0, 2)
+construct dict for one fault on A1, two faults on A4
+(2, 0, 0, 1)
+construct dict for one fault on A4, two faults on A1
+(0, 0, 1, 2)
+construct dict for one fault on A3, two faults on A4
+(0, 1, 2, 0)
+construct dict for one fault on A2, two faults on A3
+(1, 0, 2, 0)
+construct dict for one fault on A1, two faults on A3
+(1, 2, 0, 0)
+construct dict for one fault on A1, two faults on A2
+(2, 1, 0, 0)
+construct dict for one fault on A2, two faults on A1
+(0, 1, 0, 2)
+construct dict for one fault on A2, two faults on A4
+(0, 2, 1, 0)
+construct dict for one fault on A3, two faults on A2
+(2, 0, 1, 0)
+construct dict for one fault on A3, two faults on A1
+finish constructing 0012 dictionaries, elapsed time: 5090.050404548645 seconds
 test 5 faults distributed as (0, 0, 1, 4), MITM between (0, 0, 0, 2) and (0, 0, 1, 2)
 found 0 sets violating strict FT
 test 5 faults distributed as (0, 0, 2, 3), MITM between (0, 0, 2, 0) and (0, 0, 0, 3)
@@ -15,23 +146,23 @@ found 0 sets violating strict FT
 test 5 faults distributed as (0, 1, 3, 1), MITM between (0, 1, 0, 1) and (0, 0, 3, 0)
 found 1 sets violating strict FT
 test 5 faults distributed as (0, 1, 4, 0), MITM between (0, 1, 1, 0) and (0, 0, 3, 0)
-found 91 sets violating strict FT
+found 124 sets violating strict FT
 test 5 faults distributed as (0, 2, 0, 3), MITM between (0, 1, 0, 1) and (0, 1, 0, 2)
-found 12 sets violating strict FT
-test 5 faults distributed as (0, 2, 1, 2), MITM between (0, 1, 0, 1) and (0, 1, 1, 1)
+found 24 sets violating strict FT
+test 5 faults distributed as (0, 2, 1, 2), MITM between (0, 1, 1, 0) and (0, 1, 0, 2)
 found 0 sets violating strict FT
 test 5 faults distributed as (0, 2, 2, 1), MITM between (0, 1, 0, 1) and (0, 1, 2, 0)
-found 1 sets violating strict FT
+found 2 sets violating strict FT
 test 5 faults distributed as (0, 2, 3, 0), MITM between (0, 1, 1, 0) and (0, 1, 2, 0)
-found 149 sets violating strict FT
+found 300 sets violating strict FT
 test 5 faults distributed as (0, 3, 0, 2), MITM between (0, 1, 0, 1) and (0, 2, 0, 1)
-found 171 sets violating strict FT
+found 462 sets violating strict FT
 test 5 faults distributed as (0, 3, 1, 1), MITM between (0, 1, 0, 1) and (0, 2, 1, 0)
-found 8 sets violating strict FT
+found 9 sets violating strict FT
 test 5 faults distributed as (0, 3, 2, 0), MITM between (0, 1, 1, 0) and (0, 2, 1, 0)
-found 18 sets violating strict FT
+found 36 sets violating strict FT
 test 5 faults distributed as (0, 4, 0, 1), MITM between (0, 1, 0, 1) and (0, 3, 0, 0)
-found 125 sets violating strict FT
+found 328 sets violating strict FT
 test 5 faults distributed as (0, 4, 1, 0), MITM between (0, 1, 1, 0) and (0, 3, 0, 0)
 found 4 sets violating strict FT
 test 5 faults distributed as (1, 0, 0, 4), MITM between (1, 0, 0, 1) and (0, 0, 0, 3)
@@ -45,33 +176,33 @@ found 3 sets violating strict FT
 test 5 faults distributed as (1, 0, 4, 0), MITM between (1, 0, 1, 0) and (0, 0, 3, 0)
 found 68 sets violating strict FT
 test 5 faults distributed as (1, 1, 0, 3), MITM between (0, 1, 0, 1) and (1, 0, 0, 2)
-found 0 sets violating strict FT
-test 5 faults distributed as (1, 1, 1, 2), MITM between (0, 1, 0, 1) and (1, 0, 1, 1)
+found 3 sets violating strict FT
+test 5 faults distributed as (1, 1, 1, 2), MITM between (1, 1, 0, 0) and (0, 0, 1, 2)
 found 0 sets violating strict FT
 test 5 faults distributed as (1, 1, 2, 1), MITM between (0, 1, 0, 1) and (1, 0, 2, 0)
 found 0 sets violating strict FT
 test 5 faults distributed as (1, 1, 3, 0), MITM between (1, 1, 0, 0) and (0, 0, 3, 0)
 found 2 sets violating strict FT
-test 5 faults distributed as (1, 2, 0, 2), MITM between (0, 1, 0, 1) and (1, 1, 0, 1)
-found 72 sets violating strict FT
-test 5 faults distributed as (1, 2, 1, 1), MITM between (0, 1, 0, 1) and (1, 1, 1, 0)
+test 5 faults distributed as (1, 2, 0, 2), MITM between (1, 1, 0, 0) and (0, 1, 0, 2)
+found 36 sets violating strict FT
+test 5 faults distributed as (1, 2, 1, 1), MITM between (1, 0, 1, 0) and (0, 2, 0, 1)
 found 0 sets violating strict FT
 test 5 faults distributed as (1, 2, 2, 0), MITM between (1, 1, 0, 0) and (0, 1, 2, 0)
 found 2 sets violating strict FT
 test 5 faults distributed as (1, 3, 0, 1), MITM between (0, 1, 0, 1) and (1, 2, 0, 0)
-found 8 sets violating strict FT
+found 9 sets violating strict FT
 test 5 faults distributed as (1, 3, 1, 0), MITM between (1, 1, 0, 0) and (0, 2, 1, 0)
 found 0 sets violating strict FT
 test 5 faults distributed as (1, 4, 0, 0), MITM between (1, 1, 0, 0) and (0, 3, 0, 0)
 found 0 sets violating strict FT
 test 5 faults distributed as (2, 0, 0, 3), MITM between (2, 0, 0, 0) and (0, 0, 0, 3)
-found 3 sets violating strict FT
+found 15 sets violating strict FT
 test 5 faults distributed as (2, 0, 1, 2), MITM between (2, 0, 0, 0) and (0, 0, 1, 2)
 found 1 sets violating strict FT
 test 5 faults distributed as (2, 0, 2, 1), MITM between (2, 0, 0, 0) and (0, 0, 2, 1)
 found 2 sets violating strict FT
 test 5 faults distributed as (2, 0, 3, 0), MITM between (2, 0, 0, 0) and (0, 0, 3, 0)
-found 11 sets violating strict FT
+found 314 sets violating strict FT
 test 5 faults distributed as (2, 1, 0, 2), MITM between (0, 1, 0, 1) and (2, 0, 0, 1)
 found 36 sets violating strict FT
 test 5 faults distributed as (2, 1, 1, 1), MITM between (0, 1, 0, 1) and (2, 0, 1, 0)
@@ -80,18 +211,18 @@ test 5 faults distributed as (2, 1, 2, 0), MITM between (1, 1, 0, 0) and (1, 0, 
 found 6 sets violating strict FT
 test 5 faults distributed as (2, 2, 0, 1), MITM between (0, 1, 0, 1) and (2, 1, 0, 0)
 found 8 sets violating strict FT
-test 5 faults distributed as (2, 2, 1, 0), MITM between (1, 1, 0, 0) and (1, 1, 1, 0)
+test 5 faults distributed as (2, 2, 1, 0), MITM between (0, 1, 1, 0) and (2, 1, 0, 0)
 found 0 sets violating strict FT
 test 5 faults distributed as (2, 3, 0, 0), MITM between (1, 1, 0, 0) and (1, 2, 0, 0)
 found 0 sets violating strict FT
 test 5 faults distributed as (3, 0, 0, 2), MITM between (2, 0, 0, 0) and (1, 0, 0, 2)
-found 23 sets violating strict FT
-test 5 faults distributed as (3, 0, 1, 1), MITM between (2, 0, 0, 0) and (1, 0, 1, 1)
+found 72 sets violating strict FT
+test 5 faults distributed as (3, 0, 1, 1), MITM between (1, 0, 1, 0) and (2, 0, 0, 1)
 found 0 sets violating strict FT
 test 5 faults distributed as (3, 0, 2, 0), MITM between (2, 0, 0, 0) and (1, 0, 2, 0)
-found 20 sets violating strict FT
+found 45 sets violating strict FT
 test 5 faults distributed as (3, 1, 0, 1), MITM between (0, 1, 0, 1) and (3, 0, 0, 0)
-found 3 sets violating strict FT
+found 27 sets violating strict FT
 test 5 faults distributed as (3, 1, 1, 0), MITM between (1, 1, 0, 0) and (2, 0, 1, 0)
 found 0 sets violating strict FT
 test 5 faults distributed as (3, 2, 0, 0), MITM between (1, 1, 0, 0) and (2, 1, 0, 0)
@@ -102,7 +233,7 @@ test 5 faults distributed as (4, 0, 1, 0), MITM between (2, 0, 0, 0) and (2, 0, 
 found 0 sets violating strict FT
 test 5 faults distributed as (4, 1, 0, 0), MITM between (1, 1, 0, 0) and (3, 0, 0, 0)
 found 0 sets violating strict FT
-
+finish testing order-five faults, elapsed time: 2124.4854950904846 seconds
 test 6 faults distributed as (0, 0, 1, 5), MITM between (0, 0, 0, 3) and (0, 0, 1, 2)
 found 0 sets violating strict FT
 test 6 faults distributed as (0, 0, 2, 4), MITM between (0, 0, 2, 1) and (0, 0, 0, 3)
@@ -114,152 +245,156 @@ found 0 sets violating strict FT
 test 6 faults distributed as (0, 0, 5, 1), MITM between (0, 0, 2, 1) and (0, 0, 3, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (0, 1, 0, 5), MITM between (0, 0, 0, 3) and (0, 1, 0, 2)
-found 373 sets violating strict FT
-test 6 faults distributed as (0, 1, 1, 4), MITM between (0, 1, 1, 1) and (0, 0, 0, 3)
-found 78 sets violating strict FT
+found 740 sets violating strict FT
+test 6 faults distributed as (0, 1, 1, 4), MITM between (0, 0, 1, 2) and (0, 1, 0, 2)
+found 156 sets violating strict FT
 test 6 faults distributed as (0, 1, 2, 3), MITM between (0, 0, 2, 1) and (0, 1, 0, 2)
-found 40 sets violating strict FT
-test 6 faults distributed as (0, 1, 3, 2), MITM between (0, 0, 2, 1) and (0, 1, 1, 1)
-found 249 sets violating strict FT
-test 6 faults distributed as (1, 1, 4, 1), MITM between (0, 0, 2, 1) and (0, 1, 2, 0)
-found 145 sets violating strict FT
+found 42 sets violating strict FT
+test 6 faults distributed as (0, 1, 3, 2), MITM between (0, 0, 3, 0) and (0, 1, 0, 2)
+found 91 sets violating strict FT
+test 6 faults distributed as (0, 1, 4, 1), MITM between (0, 0, 2, 1) and (0, 1, 2, 0)
+found 1044 sets violating strict FT
 test 6 faults distributed as (0, 1, 5, 0), MITM between (0, 0, 3, 0) and (0, 1, 2, 0)
-found 1381 sets violating strict FT
+found 4310 sets violating strict FT
 test 6 faults distributed as (0, 2, 0, 4), MITM between (0, 2, 0, 1) and (0, 0, 0, 3)
-found 868 sets violating strict FT
+found 14256 sets violating strict FT
 test 6 faults distributed as (0, 2, 1, 3), MITM between (0, 2, 0, 1) and (0, 0, 1, 2)
-found 74 sets violating strict FT
+found 270 sets violating strict FT
 test 6 faults distributed as (0, 2, 2, 2), MITM between (0, 0, 2, 1) and (0, 2, 0, 1)
-found 95 sets violating strict FT
+found 252 sets violating strict FT
 test 6 faults distributed as (0, 2, 3, 1), MITM between (0, 0, 2, 1) and (0, 2, 1, 0)
-found 266 sets violating strict FT
+found 990 sets violating strict FT
 test 6 faults distributed as (0, 2, 4, 0), MITM between (0, 0, 3, 0) and (0, 2, 1, 0)
-found 1074 sets violating strict FT
+found 6800 sets violating strict FT
 test 6 faults distributed as (0, 3, 0, 3), MITM between (0, 3, 0, 0) and (0, 0, 0, 3)
-found 12 sets violating strict FT
+found 476 sets violating strict FT
 test 6 faults distributed as (0, 3, 1, 2), MITM between (0, 3, 0, 0) and (0, 0, 1, 2)
-found 4 sets violating strict FT
+found 16 sets violating strict FT
 test 6 faults distributed as (0, 3, 2, 1), MITM between (0, 0, 2, 1) and (0, 3, 0, 0)
-found 19 sets violating strict FT
+found 101 sets violating strict FT
 test 6 faults distributed as (0, 3, 3, 0), MITM between (0, 0, 3, 0) and (0, 3, 0, 0)
-found 22 sets violating strict FT
+found 503 sets violating strict FT
 test 6 faults distributed as (0, 4, 0, 2), MITM between (0, 3, 0, 0) and (0, 1, 0, 2)
-found 1544 sets violating strict FT
-test 6 faults distributed as (0, 4, 1, 1), MITM between (0, 3, 0, 0) and (0, 1, 1, 1)
-found 565 sets violating strict FT
+found 12112 sets violating strict FT
+test 6 faults distributed as (0, 4, 1, 1), MITM between (0, 2, 0, 1) and (0, 2, 1, 0)
+found 1482 sets violating strict FT
 test 6 faults distributed as (0, 4, 2, 0), MITM between (0, 1, 2, 0) and (0, 3, 0, 0)
-found 615 sets violating strict FT
+found 4028 sets violating strict FT
 test 6 faults distributed as (0, 5, 0, 1), MITM between (0, 3, 0, 0) and (0, 2, 0, 1)
-found 2526 sets violating strict FT
+found 10220 sets violating strict FT
 test 6 faults distributed as (0, 5, 1, 0), MITM between (0, 3, 0, 0) and (0, 2, 1, 0)
-found 206 sets violating strict FT
+found 310 sets violating strict FT
 test 6 faults distributed as (1, 0, 0, 5), MITM between (1, 0, 0, 2) and (0, 0, 0, 3)
-found 845 sets violating strict FT
+found 1750 sets violating strict FT
 test 6 faults distributed as (1, 0, 1, 4), MITM between (1, 0, 0, 2) and (0, 0, 1, 2)
-found 217 sets violating strict FT
+found 552 sets violating strict FT
 test 6 faults distributed as (1, 0, 2, 3), MITM between (0, 0, 2, 1) and (1, 0, 0, 2)
-found 29 sets violating strict FT
-test 6 faults distributed as (1, 0, 3, 2), MITM between (0, 0, 2, 1) and (1, 0, 1, 1)
-found 411 sets violating strict FT
+found 147 sets violating strict FT
+test 6 faults distributed as (1, 0, 3, 2), MITM between (1, 0, 0, 2) and (0, 0, 3, 0)
+found 82 sets violating strict FT
 test 6 faults distributed as (1, 0, 4, 1), MITM between (0, 0, 2, 1) and (1, 0, 2, 0)
-found 332 sets violating strict FT
+found 840 sets violating strict FT
 test 6 faults distributed as (1, 0, 5, 0), MITM between (0, 0, 3, 0) and (1, 0, 2, 0)
-found 1175 sets violating strict FT
+found 2200 sets violating strict FT
 test 6 faults distributed as (1, 1, 0, 4), MITM between (1, 0, 0, 2) and (0, 1, 0, 2)
-found 430 sets violating strict FT
-test 6 faults distributed as (1, 1, 1, 3), MITM between (1, 0, 0, 2) and (0, 1, 1, 1)
-found 72 sets violating strict FT
-test 6 faults distributed as (1, 1, 2, 2), MITM between (0, 0, 2, 1) and (1, 1, 0, 1)
-found 9 sets violating strict FT
-test 6 faults distributed as (1, 1, 3, 1), MITM between (0, 0, 2, 1) and (1, 1, 1, 0)
-found 627 sets violating strict FT
-test 6 faults distributed as (1, 1, 4, 0), MITM between (0, 0, 3, 0) and (1, 1, 1, 0)
-found 786 sets violating strict FT
-test 6 faults distributed as (1, 2, 0, 3), MITM between (1, 0, 0, 2) and (0, 2, 0, 1)
-found 116 sets violating strict FT
-test 6 faults distributed as (1, 2, 1, 2), MITM between (1, 0, 0, 2) and (0, 2, 1, 0)
-found 2 sets violating strict FT
-test 6 faults distributed as (1, 2, 2, 1), MITM between (0, 0, 2, 1) and (1, 2, 0, 0)
+found 738 sets violating strict FT
+test 6 faults distributed as (1, 1, 2, 2), MITM between (1, 0, 0, 2) and (0, 1, 2, 0)
 found 22 sets violating strict FT
+test 6 faults distributed as (1, 1, 4, 0), MITM between (0, 1, 2, 0) and (1, 0, 2, 0)
+found 2358 sets violating strict FT
+test 6 faults distributed as (1, 2, 0, 3), MITM between (1, 0, 0, 2) and (0, 2, 0, 1)
+found 1308 sets violating strict FT
+test 6 faults distributed as (1, 2, 1, 2), MITM between (1, 0, 0, 2) and (0, 2, 1, 0)
+found 3 sets violating strict FT
+test 6 faults distributed as (1, 2, 2, 1), MITM between (0, 0, 2, 1) and (1, 2, 0, 0)
+found 88 sets violating strict FT
 test 6 faults distributed as (1, 2, 3, 0), MITM between (0, 0, 3, 0) and (1, 2, 0, 0)
-found 34 sets violating strict FT
+found 142 sets violating strict FT
 test 6 faults distributed as (1, 3, 0, 2), MITM between (1, 0, 0, 2) and (0, 3, 0, 0)
-found 123 sets violating strict FT
-test 6 faults distributed as (1, 3, 1, 1), MITM between (1, 0, 1, 1) and (0, 3, 0, 0)
-found 93 sets violating strict FT
+found 577 sets violating strict FT
 test 6 faults distributed as (1, 3, 2, 0), MITM between (0, 1, 2, 0) and (1, 2, 0, 0)
-found 116 sets violating strict FT
-test 6 faults distributed as (1, 4, 0, 1), MITM between (0, 3, 0, 0) and (1, 1, 0, 1)
-found 644 sets violating strict FT
-test 6 faults distributed as (1, 4, 1, 0), MITM between (0, 3, 0, 0) and (1, 1, 1, 0)
+found 282 sets violating strict FT
+test 6 faults distributed as (1, 4, 0, 1), MITM between (0, 2, 0, 1) and (1, 2, 0, 0)
+found 1926 sets violating strict FT
+test 6 faults distributed as (1, 4, 1, 0), MITM between (1, 2, 0, 0) and (0, 2, 1, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (1, 5, 0, 0), MITM between (0, 3, 0, 0) and (1, 2, 0, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (2, 0, 0, 4), MITM between (1, 0, 0, 2) and (1, 0, 0, 2)
-found 0 sets violating strict FT
-test 6 faults distributed as (2, 0, 1, 3), MITM between (1, 0, 0, 2) and (1, 0, 1, 1)
-found 174 sets violating strict FT
+found 15792 sets violating strict FT
+test 6 faults distributed as (2, 0, 1, 3), MITM between (2, 0, 0, 1) and (0, 0, 1, 2)
+found 411 sets violating strict FT
 test 6 faults distributed as (2, 0, 2, 2), MITM between (0, 0, 2, 1) and (2, 0, 0, 1)
-found 127 sets violating strict FT
+found 1020 sets violating strict FT
 test 6 faults distributed as (2, 0, 3, 1), MITM between (0, 0, 2, 1) and (2, 0, 1, 0)
-found 469 sets violating strict FT
+found 2541 sets violating strict FT
 test 6 faults distributed as (2, 0, 4, 0), MITM between (0, 0, 3, 0) and (2, 0, 1, 0)
-found 1442 sets violating strict FT
-test 6 faults distributed as (2, 1, 0, 3), MITM between (1, 0, 0, 2) and (1, 1, 0, 1)
-found 1031 sets violating strict FT
-test 6 faults distributed as (2, 1, 1, 2), MITM between (1, 0, 0, 2) and (1, 1, 1, 0)
-found 318 sets violating strict FT
+found 20272 sets violating strict FT
+test 6 faults distributed as (2, 1, 0, 3), MITM between (2, 1, 0, 0) and (0, 0, 0, 3)
+found 182 sets violating strict FT
+test 6 faults distributed as (2, 1, 1, 2), MITM between (2, 1, 0, 0) and (0, 0, 1, 2)
+found 191 sets violating strict FT
 test 6 faults distributed as (2, 1, 2, 1), MITM between (0, 0, 2, 1) and (2, 1, 0, 0)
-found 85 sets violating strict FT
+found 610 sets violating strict FT
 test 6 faults distributed as (2, 1, 3, 0), MITM between (0, 0, 3, 0) and (2, 1, 0, 0)
-found 103 sets violating strict FT
+found 1042 sets violating strict FT
 test 6 faults distributed as (2, 2, 0, 2), MITM between (1, 0, 0, 2) and (1, 2, 0, 0)
-found 446 sets violating strict FT
-test 6 faults distributed as (2, 2, 1, 1), MITM between (1, 0, 1, 1) and (1, 2, 0, 0)
-found 298 sets violating strict FT
+found 1408 sets violating strict FT
+test 6 faults distributed as (2, 2, 1, 1), MITM between (0, 2, 0, 1) and (2, 0, 1, 0)
+found 187 sets violating strict FT
 test 6 faults distributed as (2, 2, 2, 0), MITM between (0, 1, 2, 0) and (2, 1, 0, 0)
-found 346 sets violating strict FT
+found 546 sets violating strict FT
 test 6 faults distributed as (2, 3, 0, 1), MITM between (2, 1, 0, 0) and (0, 2, 0, 1)
-found 727 sets violating strict FT
+found 1235 sets violating strict FT
 test 6 faults distributed as (2, 3, 1, 0), MITM between (2, 1, 0, 0) and (0, 2, 1, 0)
-found 12 sets violating strict FT
+found 60 sets violating strict FT
 test 6 faults distributed as (2, 4, 0, 0), MITM between (2, 1, 0, 0) and (0, 3, 0, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (3, 0, 0, 3), MITM between (1, 0, 0, 2) and (2, 0, 0, 1)
-found 1602 sets violating strict FT
+found 3501 sets violating strict FT
 test 6 faults distributed as (3, 0, 1, 2), MITM between (1, 0, 0, 2) and (2, 0, 1, 0)
-found 78 sets violating strict FT
+found 156 sets violating strict FT
 test 6 faults distributed as (3, 0, 2, 1), MITM between (0, 0, 2, 1) and (3, 0, 0, 0)
-found 79 sets violating strict FT
+found 602 sets violating strict FT
 test 6 faults distributed as (3, 0, 3, 0), MITM between (0, 0, 3, 0) and (3, 0, 0, 0)
-found 110 sets violating strict FT
+found 2580 sets violating strict FT
 test 6 faults distributed as (3, 1, 0, 2), MITM between (1, 0, 0, 2) and (2, 1, 0, 0)
-found 393 sets violating strict FT
-test 6 faults distributed as (3, 1, 1, 1), MITM between (1, 0, 1, 1) and (2, 1, 0, 0)
-found 292 sets violating strict FT
+found 1278 sets violating strict FT
 test 6 faults distributed as (3, 1, 2, 0), MITM between (0, 1, 2, 0) and (3, 0, 0, 0)
-found 10 sets violating strict FT
+found 52 sets violating strict FT
 test 6 faults distributed as (3, 2, 0, 1), MITM between (3, 0, 0, 0) and (0, 2, 0, 1)
-found 143 sets violating strict FT
+found 311 sets violating strict FT
 test 6 faults distributed as (3, 2, 1, 0), MITM between (3, 0, 0, 0) and (0, 2, 1, 0)
 found 2 sets violating strict FT
 test 6 faults distributed as (3, 3, 0, 0), MITM between (3, 0, 0, 0) and (0, 3, 0, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (4, 0, 0, 2), MITM between (1, 0, 0, 2) and (3, 0, 0, 0)
-found 438 sets violating strict FT
-test 6 faults distributed as (4, 0, 1, 1), MITM between (1, 0, 1, 1) and (3, 0, 0, 0)
+found 4212 sets violating strict FT
+test 6 faults distributed as (4, 0, 1, 1), MITM between (2, 0, 0, 1) and (2, 0, 1, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (4, 0, 2, 0), MITM between (3, 0, 0, 0) and (1, 0, 2, 0)
-found 375 sets violating strict FT
-test 6 faults distributed as (4, 1, 0, 1), MITM between (3, 0, 0, 0) and (1, 1, 0, 1)
-found 533 sets violating strict FT
-test 6 faults distributed as (4, 1, 1, 0), MITM between (3, 0, 0, 0) and (1, 1, 1, 0)
+found 2088 sets violating strict FT
+test 6 faults distributed as (4, 1, 0, 1), MITM between (2, 1, 0, 0) and (2, 0, 0, 1)
+found 2618 sets violating strict FT
+test 6 faults distributed as (4, 1, 1, 0), MITM between (2, 1, 0, 0) and (2, 0, 1, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (4, 2, 0, 0), MITM between (3, 0, 0, 0) and (1, 2, 0, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (5, 0, 0, 1), MITM between (3, 0, 0, 0) and (2, 0, 0, 1)
-found 332 sets violating strict FT
+found 530 sets violating strict FT
 test 6 faults distributed as (5, 0, 1, 0), MITM between (3, 0, 0, 0) and (2, 0, 1, 0)
-found 82 sets violating strict FT
+found 90 sets violating strict FT
 test 6 faults distributed as (5, 1, 0, 0), MITM between (3, 0, 0, 0) and (2, 1, 0, 0)
 found 0 sets violating strict FT
+finish testing order-six faults, elapsed time: 12177.699388742447 seconds
+test 6 faults distributed as (3,1,1,1), MITM between (3,0,0,0) and (0,1,1,1)
+found 141 sets violating strict FT
+test 6 faults distributed as (1,3,1,1), MITM between (0,3,0,0) and (1,0,1,1)
+found 254 sets violating strict FT
+test 6 faults distributed as (1,1,3,1), MITM between (0,0,3,0) and (1,1,0,1)
+found 269 sets violating strict FT
+test 6 faults distributed as (1,1,1,3), MITM between (0,0,0,3) and (1,1,1,0)
+found 92 sets violating strict FT
+finish testing order-six faults like (3,1,1,1), elapsed time: 2487.778032064438 seconds
+
+

@@ -1,7 +1,5 @@
 import os
 import subprocess
-import numpy as np
-import sys
 
 n = input('Enter number of experiments: ')
 
@@ -18,9 +16,9 @@ def run_exp(s):
 
     print("Your results will be saved under the directory " + path + "/") 
 
-    cmd = "python test_pairs_N31.py"
-    dest = path + "/" + str(s) + "_n31" + ".log"
+    cmd = "python test_pairs.py"
+    dest = path + "/" + str(s) + ".log"
     process = subprocess.Popen(['sbatch', '--time', runtime+':00:00', '--output', dest, '--wrap', cmd])
 
 for s in range(int(n)):
-    run_exp(10+s)
+    run_exp(s)

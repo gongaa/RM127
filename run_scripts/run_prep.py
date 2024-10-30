@@ -1,7 +1,5 @@
 import os
 import subprocess
-import numpy as np
-import sys
 
 n = input('Enter number of experiments: ')
 while True:
@@ -16,18 +14,13 @@ while True:
     state = input('Enter state (zero, plus): ')
     if state in ['zero', 'plus']:
         break
-while True:
-    phase_first = input('For d=7 plus state, phase first? (y/n): ')
-    if phase_first in ['y', 'n']:
-        break
 
 runtime = input("Enter runtime: ")
 
 # p = input('CNOT error rate: ')
 
 suffix = "d" + d + "_" + state
-if phase_first == 'y' and d == '7':
-    suffix += "_phase_first"
+
 filename = "full_prep_sim_" + suffix + ".py"
 parent_dir = "logs_prep_SPAM_equal_CNOT/" if factor == '1.0' else "logs_prep_SPAM_half_CNOT/"
 

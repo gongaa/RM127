@@ -17,8 +17,8 @@ from multiprocessing import Process
 ####################### Settings ######################
 n = 7
 d = 15 
-state = '0'
-flip_type = 1  # 0 for X-flip, 1 for Z-flip
+state = '+'
+flip_type = 0  # 0 for X-flip, 1 for Z-flip
 #######################################################
 N = 2 ** n
 
@@ -334,34 +334,34 @@ def construct_0002_dict(a):
                 dict_0002[key].append(to_store)
     return dict_0002, explain_dict
 
-
-def construct_0111_dict(a, b, c, filename):
-    my_file = Path(filename)
-    if my_file.exists():
-        return
+# directly test faults like (3,1,1,1), because 0111 dictionaries are too large to store
+def test_6_faults_3111(a, b, c, d):
+    t = [0,0,0,0]
+    t[d] = 3
+    with open(f"{parent_dir}/{''.join(map(str, t))}.pkl", 'rb') as f:
+        dict_0003 = pickle.load(f)
     a_pcm, b_pcm, c_pcm = pcms[a], pcms[b], pcms[c]
     a_res, b_res, c_res = residual_error_dicts[a], residual_error_dicts[b], residual_error_dicts[c]
-    dict_0111 = {}
-#     explain_dict = {}
+    temp_cnt = 0
     for i in range(a_pcm.shape[1]):
         for j in range(b_pcm.shape[1]):
             for k in range(c_pcm.shape[1]):
                 xor = a_pcm[:,i] ^ b_pcm[:,j] ^ c_pcm[:,k]
                 key = int(''.join(xor.astype('str')), 2)
-                to_store = np.zeros(N, dtype=np.bool_)
-                if a in residual:
-                    to_store ^= a_res[i]
-                if b in residual:
-                    to_store ^= b_res[j]
-                if c in residual:
-                    to_store ^= c_res[k]
-                if key not in dict_0111.keys():
-                    dict_0111[key] = [to_store]
-#                     explain_dict[key] = (i,j,k)
-                else:
-                    dict_0111[key].append(to_store)
-    with open(filename, 'wb') as f:
-        pickle.dump(dict_0111, f)   
+                if key in dict_0003.keys():
+                    v1_ = np.zeros(N, dtype=np.bool_)
+                    if a in residual:
+                        v1_ ^= a_res[i]
+                    if b in residual:
+                        v1_ ^= b_res[j]
+                    if c in residual:
+                        v1_ ^= c_res[k]
+                    for v2_ in dict_0003[key]:
+                        final_error = v1_ ^ v2_
+                        if final_error.sum() > 6 and is_malignant(final_error, 6):
+                            temp_cnt += 1
+    print(f"found {temp_cnt} sets violating strict FT")
+
    
 def construct_0003_dict(a, filename):
     my_file = Path(filename)
@@ -434,6 +434,11 @@ def test_5_faults(t1, t2):
     print(f"found {temp_cnt} sets violating strict FT")
 
 def test_6_faults(t1, t2):
+    # if t1 == (2,1,0,0) and t2 == (0,2,0,1):
+    #     t1 = (2,0,0,1)
+    #     t2 = (0,3,0,0)
+    # else:
+    #     return
     with open(f"{parent_dir}/{''.join(map(str, t1))}.pkl", 'rb') as f:
         a_dict = pickle.load(f)
     with open(f"{parent_dir}/{''.join(map(str, t2))}.pkl", 'rb') as f:
@@ -467,7 +472,10 @@ if __name__ == "__main__":
 
     sum_1_options = perm_0001
     sum_2_options = perm_0002 | perm_0011
-    sum_3_options = perm_0003 | perm_0012 | perm_0111
+    sum_3_options = perm_0003 | perm_0012 
+    # sum_3_options = perm_0003 | perm_0012 | perm_0111
+    # 0111 are only used in splitting faults like (3,1,1,1)
+    # directly MITM test with 3000 in that case, without constructing and saving 0111 dictionaries
 
     def split_tuple(t, op1, op2):
         for option in op1:
@@ -508,6 +516,8 @@ if __name__ == "__main__":
         split = split_tuple(t, sum_2_options, sum_3_options)
         if split:
             sum_5_splits[t] = split
+        else:
+            print(t, "cannot split without 0111")
             
     print(f"len of sum_5_splits {len(sum_5_splits)}")
         
@@ -515,6 +525,8 @@ if __name__ == "__main__":
         split = split_tuple(t, sum_3_options, sum_3_options)
         if split:
             sum_6_splits[t] = split
+        else:
+            print(t, "cannot split without 0111")
             
     print(f"len of sum_6_splits {len(sum_6_splits)}")
 
@@ -675,12 +687,8 @@ if __name__ == "__main__":
     print(f"finish testing <= 4 faults, elapsed time: {time.time() - start} seconds")
     start = time.time()
 
-    # for order five and six faults, take a lot of memory/hard disk/time to run
-    # state0_Z and state+_X take 90G each (saved on disk), runtime ~3h (intel i9-13900K)
-    # state0_X and state+_Z take 24G each (saved on disk), runtime ~1h
-    # peak memory usuage after loading in dictionaries and doing MITM test is ~30G
-    # existing output can be found under strict_FT/
-    # if do not care about those faults, comment the following out
+
+    # for order five and six faults
     if not os.path.exists(parent_dir):
         try:
             os.mkdir(parent_dir)
@@ -717,21 +725,6 @@ if __name__ == "__main__":
     print(f"finish constructing 0012 dictionaries, elapsed time: {time.time() - start} seconds")
     start = time.time()
                 
-    for t in perm_0111:
-        if second_test == False and (((t[0]+t[1]) != 0) and ((t[0]+t[1]) != 3)):
-            continue # separate tests on ancilla (1,2) and ancilla (3,4)
-        print(t)
-        name = ''.join(map(str, t))
-        filename = f"{parent_dir}/{name}.pkl"
-        [a,b,c] = np.where(t)[0]
-        print(f"construct dict for one fault on A{a+1}, one fault on A{b+1}, one fault on A{c+1}")
-        p = Process(target=construct_0111_dict, args=(a, b, c, filename))
-        p.start()
-        p.join()
-
-    print(f"finish constructing 0111 dictionaries, elapsed time: {time.time() - start} seconds")
-    start = time.time()
-
     for k, v in sum_5_splits.items():
         if second_test == False and (((k[0]+k[1]) != 0) and ((k[0]+k[1]) != 5)):
             continue # separate tests on ancilla (1,2) and ancilla (3,4)
@@ -753,3 +746,14 @@ if __name__ == "__main__":
 
     print(f"finish testing order-six faults, elapsed time: {time.time() - start} seconds")
     start = time.time()
+
+    if second_test:
+        print(f"test 6 faults distributed as (3,1,1,1), MITM between (3,0,0,0) and (0,1,1,1)")
+        p = Process(target=test_6_faults_3111, args=(1,2,3,0)); p.start(); p.join()
+        print(f"test 6 faults distributed as (1,3,1,1), MITM between (0,3,0,0) and (1,0,1,1)")
+        p = Process(target=test_6_faults_3111, args=(0,2,3,1)); p.start(); p.join()
+        print(f"test 6 faults distributed as (1,1,3,1), MITM between (0,0,3,0) and (1,1,0,1)")
+        p = Process(target=test_6_faults_3111, args=(1,0,3,2)); p.start(); p.join()
+        print(f"test 6 faults distributed as (1,1,1,3), MITM between (0,0,0,3) and (1,1,1,0)")
+        p = Process(target=test_6_faults_3111, args=(1,2,0,3)); p.start(); p.join()
+        print(f"finish testing order-six faults like (3,1,1,1), elapsed time: {time.time() - start} seconds")

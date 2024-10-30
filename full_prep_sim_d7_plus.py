@@ -134,7 +134,7 @@ if __name__ == "__main__":
         circuit.append("TICK")
         tick_circuits.append(tick_circuit)
 
-    # X error detection first, because there are much more X error test than Z error test
+    # X error detection first, because there are much more X error tests (98 = #Z-stab) than Z error tests (29 = #X-stab, include all-X).
     # copy X error from ancilla 1 to 2, and 3 to 4
     for i in range(N-1):
         circuit.append("CNOT", [i, N+i])
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     tick_circuits.append(error_copy_circuit)
 
     # in experiments, here one needs to measure ancilla 2 & 4 bitwise
-    # add noise to ancilla 2 & 4 here, even though they are already captured by DEPOLARIZE on CNOTs
+    # add measurement noise to ancilla 2 & 4 here
     for i in range(N-1):
         circuit.append("X_ERROR", N+i, p_meas)
         circuit.append("X_ERROR", 3*N+i, p_meas)
@@ -267,6 +267,7 @@ if __name__ == "__main__":
         if instruction.type == 'error'
     ]
 
+    # Uncomment the following to generate propagation dictionary.
     # start = time.time()
     # prop_dict = {}
     # print(f"total {len(flat_error_instructions)} instructions")
@@ -290,6 +291,7 @@ if __name__ == "__main__":
     #     pickle.dump(prop_dict, f)
     # print(f"Total Elapsed time: {end-start}")   
     
+    # State preparation simulation. Comment them out when generating propagation dictionary.
     generation_start = time.time()
     combined_counter = Counter({}) 
     combined_one_fault_dict = Counter({})
@@ -343,7 +345,7 @@ if __name__ == "__main__":
         end = time.time()
         if round == 0:
             print(f"Stim sampling elapsed time per {num_shots} samples: {sample_end-start} second, with postprocessing {end-start}", flush=True)
-        if (round+1) % 100 == 0: # print every 1e6 samples 
+        if (round+1) % 100 == 0:
             print("Temporary counter for among all passed samples, how many faults occured:", combined_counter, flush=True)
             
     print(f"Among {num_rounds * num_shots} samples, {total_passed} passed.")

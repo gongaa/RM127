@@ -1,54 +1,51 @@
-# List Decoder for PW-QPC 
+# Fault tolerant preparation of Quantum Reed Muller codes of blocklength 127 
 
-This repo contains the source code of the paper [Improved Logical Error Rate via List Decoding of Quantum Polar Codes](https://arxiv.org/pdf/2304.04743.pdf), where the Polarization Weight family of Quantum Polar Code is considered. 
+This repo contains the source code of the paper "Computation with Quantum Reed-Muller codes and their mapping to 2D atom array". 
 
-This repo also contains some codes the classical error correction community could use. See the directory layout below for where the files are located at. Also see the commented lines in `main.cpp`.
 
-My (classical) polar code implementation is a simplified version of [aff3ct](https://github.com/aff3ct/aff3ct). I also reimplemented the Dumer's list decoder [ECCLab](https://github.com/kshabunov/ecclab) for the Reed-Muller code. Alternatively, people can use the polar code with the Reed-Muller construction. They give very similar FER performance.
 
-## Build and Run
-
-Clone this repo, then build and run as:
+## Installation 
+Please use Python $\geq$ 3.12 and install Cython.
 ```
 make
-mkdir logs
-./build/apps/program -N 128 -Kx 65 -Kz 65 -l 16 -px 0.1 -n 10000 -con PW -seed 42 &> logs/Polar_N128_Kx65_Kz65_l16_pz10_n10000_conPW_seed42.log
+python setup.py build_ext --inplace
 ```
-Alternatively, you can run the executable by interacting with the run_SCL.py script. 
+Building C++ program via `make` also works on MAC M2 chip, but I only got Cython binding working on Linux machines.
 
-## Arguments
-The independent bit- and phase-flip error model is used, hence only independent X and Z decoding is implemented. 
-By default, it simulates an ($N,K_x,K_z$) PW-QPC in the Z basis, i.e., detect and correct bit-flip (X-type) errors. To simulate this code in the X basis (correct phase-flip errors), it suffices to simulate an ($N,K_z,K_x$) PW-QPC in the Z basis.
+# Data and log availability
+The gathered ancilla and exRec simulation logs are available on [Zenodo](https://zenodo.org/records/14003891), you can download them as follows.
+```
+wget https://zenodo.org/records/14003891/files/logs_exRec.zip && unzip logs_exRec.zip && rm -rf __MACOSX
+wget https://zenodo.org/records/14003891/files/logs_prep_SPAM_half_CNOT.zip && unzip logs_prep_SPAM_half_CNOT.zip
+wget https://zenodo.org/records/14003891/files/logs_prep_SPAM_equal_CNOT.zip && unzip logs_prep_SPAM_equal_CNOT.zip
+rm *.zip
+```
+These ancilla took supercomputer Euler twenty days to simulate, might be useful if one wants to run magic state distillation in the future. Please refer to `utils.py` and `full_Steane.py` for loading these ancilla. The propagation dictionaries are already contained there, but you can generate new ones following the comments in `full_prep_sim_*.py`.
 
-The possible options are
-* `-N` - The length of the code, use a power of two.
-* `-Kx`,`-Kz` - The number of information bits in X and Z basis. $K_x+K_z$ should be larger than $N$.
-* `-l` - The list size. 
-* `-n` - The number of samples. 
-* `-px` - The probability of bit-flip error happening on each bit (independently).
-* `-con` - The construction method. Can choose from `PW` `HPW` `RM` `Q1` `BEC`. Note that the quantum polar code constructed from `BEC` is not guaranteed to be CSS.
-* `-seed` - The random seed used to generate the noise.
-* `-version` - Choose from `0` codeword decoding (default). `1` syndrome decoding.
-* `-interval` - The printing interval for showing intermediate results. Default value is $1000$.
-* `-beta` - The $\beta$ used in the `PW` construction. Default value is $2^{1/4}$.
-* `-basis` - Whether simulate in the `Z` basis or the `X` basis.
+`logs_exRec/` contains the exRec simulation results, it also contains some useful data gathering scripts.
+## Run scripts
+Please do `mv run_scipts/* .` before using the scripts to submit jobs to Slurm servers.
+* `run_prep.py` - for `full_prep_sim_*.py` to simulate ancilla preparation and store residual errors
+* `run_exRec.py` - for `full_Steane.py` to simulate exRec
+* `run_SCL.py` - for simulating data qubit noise decoding
+* `run_test_pairs.py` - for doing heuristic search of permutations
 
-## Expected Runtime
-For $N=1024,l=128$, $10^4$ samples take 4 hours on [Euler](https://scicomp.ethz.ch/wiki/FAQ). While for $N=1024,l=16$, $10^5$ samples take 2 hours.
+## Meet-in-the-middle FT testing and malignant set counting
+`structured_test.py` contains global MITM testing/counting across four patches up to order six. `strict_FT/` stores all the logs. The following runtime estimate are based on my Linux workstation (Intel i9-13900K, 64GB memory). Order up to four takes less than half a minute.
 
-## Directory Layout
+Order five and six faults will store many order-three fault dictionaries on disk. When loading them back to do MITM, peak memory usage exceeds 50GB.
+* state0_Z and state+_X store 68G on disk, runtime ~6h
+* state0_X and state+_Z store 29G on disk, runtime ~1.5h
+## Other relevant files 
     .
-    ├── run_SCL.py                               # run ./build/apps/program 
-    ├── distance.py                              # determine the distance of the code
+    ├── layout.py                              # for drawing things related to 2D hypercube layout
+    ├── test_degeneracy.py                     # test if strict FT is violated in preparation simulations
+    ├── utils.py                               # ancilla residual error loader
     └── src                   
-        ├── Util
-        │   └── Frozen_bits_generator.cpp        # construction methods
         ├── Decoder
-        │   ├── Decoder_polar.cpp                # polar code SCL decoder
-        │   └── Decoder_RM_SCL.cpp               # Dumer's list decoder
+        │   ├── Decoder_polar.cpp              # C++ SCL decoder
+        │   └── PyDecoder_polar.pyx            # Cython binding for decoder
         └── Simulation         
-            ├── Simulation_polar_SCL.cpp         # classical polar code decoded using SCL
-            ├── Simulation_RM_SCL.cpp            # classical RM code decoded using Dumer's list decoder
-            ├── Simulation_polar_codeword.cpp    # QPC codeword decoder (a lot of comments here)
-            └── Simulation_polar_syndrome.cpp    # QPC syndrome decoder
+            └── Simulation_RM127.cpp           # data qubit noise decoding
+
 

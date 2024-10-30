@@ -28,7 +28,6 @@ PA = [(1,2),(6,0),(4,3),(3,6),(0,1),(2,3),(1,6)]
 PB = [(2,6),(5,1),(6,0),(0,5),(4,2),(0,3),(1,4)] 
 PC = [(3,1),(0,2),(2,6),(6,4),(5,0),(6,5),(3,6)] 
 PD = [(5,3),(6,1),(1,2),(2,5),(4,0),(3,4),(4,5)] 
-
 list_prod = lambda A : reduce(operator.matmul, [Eij(a[0],a[1]) for a in A], np.eye(n, dtype=int)) % 2
 
 A1 = list_prod(PA[::-1]) % 2
@@ -149,7 +148,7 @@ if __name__ == "__main__":
     tick_circuits.append(error_copy_circuit)
 
     # in experiments, here one needs to measure ancilla 2 & 4 bitwise
-    # add noise to ancilla 2 & 4 here, even though they are already captured by DEPOLARIZE on CNOTs
+    # add measurement noise to ancilla 2 & 4 here
     for i in range(N-1):
         circuit.append("X_ERROR", N+i, p_meas)
         circuit.append("X_ERROR", 3*N+i, p_meas)
@@ -178,7 +177,6 @@ if __name__ == "__main__":
         if bin_wt(i) < wt_thresh:
             detector_str += f"DETECTOR rec[{-N+i}]\n"
             num_a2_detector += 1
-    # detector_str += "DETECTOR rec[-1]\n"        
     detector_circuit = stim.Circuit(detector_str)
     circuit += detector_circuit
     print(f"#detectors put on a2: {num_a2_detector}")
@@ -198,7 +196,6 @@ if __name__ == "__main__":
         if bin_wt(i) < wt_thresh:
             detector_str += f"DETECTOR rec[{-N+i}]\n"
             num_a4_detector += 1
-    # detector_str += "DETECTOR rec[-1]\n"        
     detector_circuit = stim.Circuit(detector_str)
     circuit += detector_circuit
     print(f"#detectors put on a4: {num_a4_detector}")
@@ -239,7 +236,6 @@ if __name__ == "__main__":
         if bin_wt(i) >= wt_thresh:
             detector_str += f"DETECTOR rec[{-N+i}]\n"
             num_a3_detector += 1
-    # detector_str += "DETECTOR rec[-1]\n"        
     detector_circuit = stim.Circuit(detector_str)
     circuit += detector_circuit
     print(f"#detectors put on a3: {num_a3_detector}")
@@ -250,7 +246,6 @@ if __name__ == "__main__":
         for j in range(0, N, 2*sep):
             for i in range(sep):
                 circuit.append("CNOT", [j+i+sep, j+i])    
-    #     circuit.append("TICK")
         
     for i in range(N-1):
         if bin_wt(i) >= wt_thresh:
@@ -278,6 +273,7 @@ if __name__ == "__main__":
     ]
 
 
+    # Uncomment the following to generate propagation dictionary.
     # start = time.time()
     # prop_dict = {}
     # print(f"total {len(flat_error_instructions)} instructions")
@@ -301,6 +297,7 @@ if __name__ == "__main__":
     #     pickle.dump(prop_dict, f)
     # print(f"Total Elapsed time: {end-start}")   
 
+    # State preparation simulation. Comment them out when generating propagation dictionary.
     generation_start = time.time()
     combined_counter = Counter({}) 
     combined_one_fault_dict = Counter({})
@@ -354,7 +351,7 @@ if __name__ == "__main__":
         end = time.time()
         if round == 0:
             print(f"Stim sampling elapsed time per {num_shots} samples: {sample_end-start} second, with postprocessing {end-start}", flush=True)
-        if (round+1) % 10 == 0: # print every 1e6 samples
+        if (round+1) % 10 == 0:
             print("Temporary counter for among all passed samples, how many faults occured:", combined_counter, flush=True)
         
     print(f"Among {num_rounds * num_shots} samples, {total_passed} passed.")

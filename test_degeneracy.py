@@ -5,7 +5,6 @@ import re
 
 num_fault_pattern = re.compile(r"^(\d+) faults occurred")
 pattern = re.compile(r"^final wt on output .* X: \[(.*?)\], Y: \[(.*?)\], Z: \[(.*?)\]")
-# pattern = re.compile(r"^final wt after copying: .* X: \[(.*?)\], Y: \[(.*?)\], Z: \[(.*?)\]")
 d = 15
 rz = 4 if d==7 else 3
 rx = 2 if d==7 else 3
@@ -14,7 +13,7 @@ decoder_Z = PyDecoder_polar_SCL(rz)
 state = "zero"
     
 # test if strict FT is ever violated in simulations
-# the residual error was calculated at the runtime
+# the residual error was calculated during the simulation runtime
 # if it is higher than the fault-order, reduce it using decoder and compare again
 log_files = glob.glob(os.path.join('logs_prep_SPAM_equal_CNOT', f"d{d}_{state}" , "*", '*.log'))
 for log_file in log_files:

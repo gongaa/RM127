@@ -1,36 +1,111 @@
+structured_test.py: n=7, N=128, d=15, wt_thresh=4
+(0, 0, 1, 1) ((0, 0, 0, 1), (0, 0, 1, 0))
+(0, 1, 0, 1) ((0, 0, 0, 1), (0, 1, 0, 0))
+(0, 1, 1, 0) ((0, 1, 0, 0), (0, 0, 1, 0))
+(1, 0, 0, 1) ((0, 0, 0, 1), (1, 0, 0, 0))
+(1, 0, 1, 0) ((0, 0, 1, 0), (1, 0, 0, 0))
+(1, 1, 0, 0) ((0, 1, 0, 0), (1, 0, 0, 0))
+len of sum_3_splits 16
+len of sum_4_splits 31
+len of sum_5_splits 52
+(1, 1, 1, 3) cannot split without 0111
+(1, 1, 3, 1) cannot split without 0111
+(1, 3, 1, 1) cannot split without 0111
+(3, 1, 1, 1) cannot split without 0111
+len of sum_6_splits 76
+saving dictionaries to directory test_strict_FT_state+_Z
+second test: False, residual on: [0, 2]
+flip type Z  #detectors: 64  residual error shape 407
+flip type Z  #detectors: 64  residual error shape 407
+flip type Z  #detectors: 64  residual error shape 407
+flip type Z  #detectors: 64  residual error shape 407
+(0, 0, 0, 1)
+construct dict for one fault on A4
+(0, 1, 0, 0)
+construct dict for one fault on A2
+(0, 0, 1, 0)
+construct dict for one fault on A3
+(1, 0, 0, 0)
+construct dict for one fault on A1
+(1, 1, 0, 0)
+construct dict for one fault on A1, one fault on A2
+(0, 0, 1, 1)
+construct dict for one fault on A3, one fault on A4
+(0, 0, 0, 2)
+construct dict for two faults on A4
+(0, 0, 2, 0)
+construct dict for two faults on A3
+(0, 2, 0, 0)
+construct dict for two faults on A2
+(2, 0, 0, 0)
+construct dict for two faults on A1
+finish constructing dictionaries for order-two faults, elapsed time: 7.17694616317749 seconds
+test 2 faults distributed as (0, 0, 1, 1), MITM between (0, 0, 0, 1) and (0, 0, 1, 0)
+test 2 faults distributed as (1, 1, 0, 0), MITM between (0, 1, 0, 0) and (1, 0, 0, 0)
+test 3 faults distributed as (0, 0, 1, 2), MITM between (0, 0, 0, 1) and (0, 0, 1, 1)
+test 3 faults distributed as (0, 0, 2, 1), MITM between (0, 0, 0, 1) and (0, 0, 2, 0)
+test 3 faults distributed as (1, 2, 0, 0), MITM between (0, 1, 0, 0) and (1, 1, 0, 0)
+test 3 faults distributed as (2, 1, 0, 0), MITM between (0, 1, 0, 0) and (2, 0, 0, 0)
+test 4 faults distributed as (0, 0, 1, 3), MITM between (0, 0, 0, 2) and (0, 0, 1, 1)
+test 4 faults distributed as (0, 0, 2, 2), MITM between (0, 0, 2, 0) and (0, 0, 0, 2)
+test 4 faults distributed as (0, 0, 3, 1), MITM between (0, 0, 2, 0) and (0, 0, 1, 1)
+test 4 faults distributed as (1, 3, 0, 0), MITM between (1, 1, 0, 0) and (0, 2, 0, 0)
+test 4 faults distributed as (2, 2, 0, 0), MITM between (1, 1, 0, 0) and (1, 1, 0, 0)
+test 4 faults distributed as (3, 1, 0, 0), MITM between (1, 1, 0, 0) and (2, 0, 0, 0)
+finish testing <= 4 faults, elapsed time: 0.5265340805053711 seconds
+(0, 0, 0, 3)
+construct dict for three fault on A4
+(3, 0, 0, 0)
+construct dict for three fault on A1
+(0, 3, 0, 0)
+construct dict for three fault on A2
+(0, 0, 3, 0)
+construct dict for three fault on A3
+finish constructing 0003 dictionaries, elapsed time: 575.8765075206757 seconds
+(0, 0, 2, 1)
+construct dict for one fault on A4, two faults on A3
+(0, 0, 1, 2)
+construct dict for one fault on A3, two faults on A4
+(1, 2, 0, 0)
+construct dict for one fault on A1, two faults on A2
+(2, 1, 0, 0)
+construct dict for one fault on A2, two faults on A1
+finish constructing 0012 dictionaries, elapsed time: 1820.323115825653 seconds
 test 5 faults distributed as (0, 0, 1, 4), MITM between (0, 0, 0, 2) and (0, 0, 1, 2)
 found 0 sets violating strict FT
 test 5 faults distributed as (0, 0, 2, 3), MITM between (0, 0, 2, 0) and (0, 0, 0, 3)
-found 3 sets violating strict FT
+found 22 sets violating strict FT
 test 5 faults distributed as (0, 0, 3, 2), MITM between (0, 0, 2, 0) and (0, 0, 1, 2)
-found 25 sets violating strict FT
+found 54 sets violating strict FT
 test 5 faults distributed as (0, 0, 4, 1), MITM between (0, 0, 2, 0) and (0, 0, 2, 1)
 found 0 sets violating strict FT
 test 5 faults distributed as (1, 4, 0, 0), MITM between (1, 1, 0, 0) and (0, 3, 0, 0)
 found 0 sets violating strict FT
 test 5 faults distributed as (2, 3, 0, 0), MITM between (1, 1, 0, 0) and (1, 2, 0, 0)
-found 3 sets violating strict FT
+found 6 sets violating strict FT
 test 5 faults distributed as (3, 2, 0, 0), MITM between (1, 1, 0, 0) and (2, 1, 0, 0)
-found 132 sets violating strict FT
+found 282 sets violating strict FT
 test 5 faults distributed as (4, 1, 0, 0), MITM between (1, 1, 0, 0) and (3, 0, 0, 0)
 found 0 sets violating strict FT
+finish testing order-five faults, elapsed time: 329.72104382514954 seconds
 test 6 faults distributed as (0, 0, 1, 5), MITM between (0, 0, 0, 3) and (0, 0, 1, 2)
 found 0 sets violating strict FT
 test 6 faults distributed as (0, 0, 2, 4), MITM between (0, 0, 2, 1) and (0, 0, 0, 3)
-found 410 sets violating strict FT
+found 6552 sets violating strict FT
 test 6 faults distributed as (0, 0, 3, 3), MITM between (0, 0, 2, 1) and (0, 0, 1, 2)
-found 1077 sets violating strict FT
+found 2439 sets violating strict FT
 test 6 faults distributed as (0, 0, 4, 2), MITM between (0, 0, 2, 1) and (0, 0, 2, 1)
-found 0 sets violating strict FT
+found 6924 sets violating strict FT
 test 6 faults distributed as (0, 0, 5, 1), MITM between (0, 0, 2, 1) and (0, 0, 3, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (1, 5, 0, 0), MITM between (0, 3, 0, 0) and (1, 2, 0, 0)
 found 0 sets violating strict FT
 test 6 faults distributed as (2, 4, 0, 0), MITM between (2, 1, 0, 0) and (0, 3, 0, 0)
-found 639 sets violating strict FT
+found 3160 sets violating strict FT
 test 6 faults distributed as (3, 3, 0, 0), MITM between (3, 0, 0, 0) and (0, 3, 0, 0)
-found 57 sets violating strict FT
+found 899 sets violating strict FT
 test 6 faults distributed as (4, 2, 0, 0), MITM between (3, 0, 0, 0) and (1, 2, 0, 0)
-found 197 sets violating strict FT
+found 4408 sets violating strict FT
 test 6 faults distributed as (5, 1, 0, 0), MITM between (3, 0, 0, 0) and (2, 1, 0, 0)
-found 22 sets violating strict FT
+found 30 sets violating strict FT
+finish testing order-six faults, elapsed time: 2497.3051578998566 seconds
