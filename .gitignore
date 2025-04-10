@@ -5,6 +5,8 @@ test_strict_FT*/*
 slurm*
 .ipynb_checkpoints
 .vscode
+.DS_store
+triply-even/__pycache__
 theme.py
 __pycache__
 *.html
